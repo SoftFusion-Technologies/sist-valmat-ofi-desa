@@ -1,0 +1,112 @@
+/* Benjamin Orellana - 2026/04/21 - Base inicial limpia y seria para la identidad visual de VALMAT. */
+
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('./font/Montserrat-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'BigNoodle';
+  src: url('./font/big_noodle_titling.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'MessinaRegular';
+  src: url('./font/MessinaSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+:root {
+  /* Benjamin Orellana - 2026/04/21 - Tipografías base reutilizables para VALMAT. */
+  --font-family-base: 'Montserrat', sans-serif;
+  --font-family-body: 'MessinaRegular', sans-serif;
+  --font-family-display: 'BigNoodle', sans-serif;
+
+  /* Benjamin Orellana - 2026/04/21 - Pesos tipográficos reutilizables. */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+  --font-weight-black-italic: 900;
+
+  /* Benjamin Orellana - 2026/04/21 - Colores institucionales extraídos y adaptados desde el logo de VALMAT. */
+  --color-primary: #19d3df;
+  --color-secondary: #38b7d5;
+  --color-accent: #5a97d0;
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  /* Benjamin Orellana - 2026/04/21 - Neutros sobrios para una landing seria e institucional. */
+  --color-bg: #ffffff;
+  --color-surface: #f7f9fb;
+  --color-border: #d9e2e8;
+  --color-text: #111111;
+  --color-text-soft: #4b5563;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-body);
+  font-weight: var(--font-weight-regular);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+picture,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.titulo {
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-black-italic);
+  font-style: italic;
+}
+
+.cuerpo {
+  font-family: var(--font-family-body);
+  font-weight: var(--font-weight-regular);
+}
+
+.font-bignoodle {
+  font-family: BigNoodle
+}
+
+.font-messina {
+  font-family: MessinaRegular;
+}
