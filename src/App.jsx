@@ -5,6 +5,7 @@ import Servicios from './sections/Servicios';
 import ServicesVideosShowcase from './components/sections/ServicesVideosShowcase';
 import Footer from './components/Footer';
 import Contacto from './sections/Contacto';
+import Cobertura from './sections/Cobertura';
 function App() {
   return (
     <>
@@ -12,6 +13,7 @@ function App() {
       <Hero></Hero>
       <Servicios />
       <ServicesVideosShowcase />
+      <Cobertura></Cobertura>
       <Contacto></Contacto>
       <Footer logoSrc={logoValmat} />
     </>
