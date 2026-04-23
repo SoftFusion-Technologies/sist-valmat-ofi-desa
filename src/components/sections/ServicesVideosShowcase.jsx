@@ -46,7 +46,7 @@ const extraReels = [
     id: 1,
     label: 'Reel adicional 01',
     title: 'Sumar nuevo caso real',
-    postUrl: 'https://www.instagram.com/',
+    postUrl: 'https://www.instagram.com/p/DVhZlUAElXk/',
     videoSrc: '/videos/reel-01.mp4',
     poster: '/videos/posters/reel-01.jpg'
   },
@@ -54,7 +54,7 @@ const extraReels = [
     id: 2,
     label: 'Reel adicional 02',
     title: 'Sumar nuevo proceso',
-    postUrl: 'https://www.instagram.com/',
+    postUrl: 'https://www.instagram.com/p/DRhlKpXEZ0K/',
     videoSrc: '/videos/reel-02.mp4',
     poster: '/videos/posters/reel-02.jpg'
   },
@@ -62,7 +62,7 @@ const extraReels = [
     id: 3,
     label: 'Reel adicional 03',
     title: 'Sumar nuevo resultado',
-    postUrl: 'https://www.instagram.com/',
+    postUrl: 'https://www.instagram.com/p/DKIIsg-Osg5/',
     videoSrc: '/videos/reel-03.mp4',
     poster: '/videos/posters/reel-03.jpg'
   }

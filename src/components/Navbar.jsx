@@ -12,8 +12,8 @@ import { FaInstagram, FaFacebookF, FaWhatsapp } from 'react-icons/fa';
 const NAV_ITEMS = [
   { label: 'Inicio', href: '#inicio' },
   { label: 'Servicios', href: '#servicios' },
-  { label: 'Nosotros', href: '#nosotros' },
-  { label: 'Contacto', href: '#contacto' }
+  { label: 'Contacto', href: '#contacto' },
+  { label: 'Nosotros', href: '#nosotros' }
 ];
 
 // Benjamin Orellana - 2026/04/22 - Accesos rápidos institucionales para redes y medios de contacto de VALMAT.
