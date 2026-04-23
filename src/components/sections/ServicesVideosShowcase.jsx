@@ -106,12 +106,6 @@ function ServicesVideosShowcase() {
             <span className="text-[var(--color-primary)]">resultado</span> se vea
             de verdad
           </h2>
-
-          <p className="cuerpo mt-5 text-[1rem] leading-8 text-slate-600 sm:text-[1.05rem]">
-            Estos videos acompañan la presentación de servicios con trabajos
-            reales. Cada bloque reproduce en silencio y en loop, y al hacer
-            click lleva al contenido original en Instagram.
-          </p>
         </motion.div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
