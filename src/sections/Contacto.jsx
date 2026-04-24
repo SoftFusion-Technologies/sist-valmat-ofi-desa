@@ -1,5 +1,9 @@
-import React, { useMemo, useState } from 'react';
+// Benjamin Orellana - 2026/04/23 - Formulario de contacto paso a paso simplificado a una sola columna vertical, con progreso integrado arriba del bloque principal.
+// Benjamin Orellana - 2026/04/24 - Se corrige scroll mobile al avanzar pasos y se moderniza la UI sin agregar textos extra ni ocupar más espacio visual.
+
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import Swal from 'sweetalert2';
 import {
   FaChevronDown,
   FaChevronUp,
@@ -7,8 +11,6 @@ import {
   FaClipboardList,
   FaCheckCircle
 } from 'react-icons/fa';
-
-// Benjamin Orellana - 2026/04/23 - Formulario de contacto paso a paso simplificado a una sola columna vertical, con progreso integrado arriba del bloque principal.
 
 const SERVICE_OPTIONS = [
   {
@@ -75,18 +77,18 @@ function StepHeader({ stepNumber, title, isOpen, isCompleted, onClick }) {
       type="button"
       onClick={onClick}
       className={classNames(
-        'flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-all duration-300 sm:px-5',
+        'group flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-all duration-300 sm:px-5 sm:py-4',
         isOpen ? 'bg-white' : 'bg-slate-50/80 hover:bg-slate-100/80'
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <div
           className={classNames(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-all duration-300',
             isCompleted
               ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
               : isOpen
-                ? 'border-sky-200 bg-sky-50 text-sky-600'
+                ? 'border-sky-200 bg-sky-50 text-sky-600 shadow-[0_10px_22px_rgba(14,165,233,0.10)]'
                 : 'border-slate-200 bg-white text-slate-500'
           )}
         >
@@ -98,17 +100,28 @@ function StepHeader({ stepNumber, title, isOpen, isCompleted, onClick }) {
         </div>
 
         <div className="min-w-0">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
             Paso {stepNumber}
           </p>
-          <h3 className="mt-0.5 text-[1rem] font-semibold text-slate-900 sm:text-[1.02rem]">
+          <h3 className="mt-0.5 truncate text-[0.98rem] font-semibold text-slate-900 sm:text-[1.02rem]">
             {title}
           </h3>
         </div>
       </div>
 
-      <div className="text-slate-400">
-        {isOpen ? <FaChevronUp /> : <FaChevronDown />}
+      <div
+        className={classNames(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all duration-300',
+          isOpen
+            ? 'border-sky-100 bg-sky-50 text-sky-600'
+            : 'border-slate-200 bg-white text-slate-400 group-hover:border-sky-100 group-hover:text-sky-600'
+        )}
+      >
+        {isOpen ? (
+          <FaChevronUp className="text-[0.78rem]" />
+        ) : (
+          <FaChevronDown className="text-[0.78rem]" />
+        )}
       </div>
     </button>
   );
@@ -122,7 +135,7 @@ function StepContainer({ isOpen, children }) {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden"
         >
           <div className="border-t border-slate-100 px-4 pb-5 pt-4 sm:px-5 sm:pb-6 sm:pt-5">
@@ -136,8 +149,8 @@ function StepContainer({ isOpen, children }) {
 
 function Input({ label, required = false, error, ...props }) {
   return (
-    <div className="space-y-2">
-      <label className="block text-[0.88rem] font-semibold text-slate-700">
+    <div className="space-y-1.5">
+      <label className="block text-[0.86rem] font-semibold text-slate-700">
         {label}
         {required ? <span className="ml-1 text-sky-600">*</span> : null}
       </label>
@@ -149,12 +162,12 @@ function Input({ label, required = false, error, ...props }) {
           'placeholder:text-slate-400',
           error
             ? 'border-red-300 bg-red-50/40 focus:border-red-400'
-            : 'border-slate-200 focus:border-sky-300 focus:bg-sky-50/20'
+            : 'border-slate-200 focus:border-sky-300 focus:bg-sky-50/20 focus:shadow-[0_0_0_4px_rgba(14,165,233,0.08)]'
         )}
       />
 
       {error ? (
-        <p className="text-[0.78rem] font-medium text-red-500">{error}</p>
+        <p className="text-[0.76rem] font-medium text-red-500">{error}</p>
       ) : null}
     </div>
   );
@@ -162,8 +175,8 @@ function Input({ label, required = false, error, ...props }) {
 
 function TextArea({ label, required = false, error, ...props }) {
   return (
-    <div className="space-y-2">
-      <label className="block text-[0.88rem] font-semibold text-slate-700">
+    <div className="space-y-1.5">
+      <label className="block text-[0.86rem] font-semibold text-slate-700">
         {label}
         {required ? <span className="ml-1 text-sky-600">*</span> : null}
       </label>
@@ -171,16 +184,16 @@ function TextArea({ label, required = false, error, ...props }) {
       <textarea
         {...props}
         className={classNames(
-          'min-h-[128px] w-full resize-none rounded-2xl border bg-white px-4 py-3 text-[0.94rem] text-slate-800 outline-none transition-all duration-300',
+          'min-h-[112px] w-full resize-none rounded-2xl border bg-white px-4 py-3 text-[0.94rem] text-slate-800 outline-none transition-all duration-300 sm:min-h-[128px]',
           'placeholder:text-slate-400',
           error
             ? 'border-red-300 bg-red-50/40 focus:border-red-400'
-            : 'border-slate-200 focus:border-sky-300 focus:bg-sky-50/20'
+            : 'border-slate-200 focus:border-sky-300 focus:bg-sky-50/20 focus:shadow-[0_0_0_4px_rgba(14,165,233,0.08)]'
         )}
       />
 
       {error ? (
-        <p className="text-[0.78rem] font-medium text-red-500">{error}</p>
+        <p className="text-[0.76rem] font-medium text-red-500">{error}</p>
       ) : null}
     </div>
   );
@@ -194,7 +207,7 @@ function ActionRow({
   loading = false
 }) {
   return (
-    <div className="mt-5 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-between">
+    <div className="mt-5 grid grid-cols-2 gap-2.5 sm:flex sm:justify-between">
       <button
         type="button"
         onClick={onPrev}
@@ -203,7 +216,7 @@ function ActionRow({
           'inline-flex items-center justify-center rounded-2xl px-4 py-3 text-[0.88rem] font-semibold transition-all duration-300',
           isFirst || loading
             ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400'
-            : 'border border-slate-200 bg-white text-slate-700 hover:-translate-y-[1px] hover:border-slate-300'
+            : 'border border-slate-200 bg-white text-slate-700 hover:-translate-y-[1px] hover:border-slate-300 active:scale-[0.98]'
         )}
       >
         Volver
@@ -213,7 +226,7 @@ function ActionRow({
         type="button"
         onClick={onNext}
         disabled={loading}
-        className="inline-flex items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-[0.9rem] font-semibold text-white shadow-[0_14px_30px_rgba(25,211,223,0.18)] transition-all duration-300 hover:-translate-y-[1px] hover:bg-[var(--color-secondary)]"
+        className="inline-flex items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-[0.9rem] font-semibold text-white shadow-[0_14px_30px_rgba(25,211,223,0.18)] transition-all duration-300 hover:-translate-y-[1px] hover:bg-[var(--color-secondary)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {loading ? 'Enviando...' : isLast ? 'Enviar solicitud' : 'Siguiente'}
       </button>
@@ -228,6 +241,11 @@ function ContactoPasoAPaso() {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
 
+  const sectionRef = useRef(null);
+  const formCardRef = useRef(null);
+  const stepRefs = useRef({});
+  const scrollTimerRef = useRef(null);
+
   const progress = useMemo(() => (currentStep / 5) * 100, [currentStep]);
 
   const completedSteps = useMemo(() => {
@@ -239,6 +257,34 @@ function ContactoPasoAPaso() {
       5: Boolean(form.fecha && form.franja && form.dias.length > 0)
     };
   }, [form]);
+
+  // Benjamin Orellana - 2026/04/24 - Hace scroll al paso activo en mobile sin mandar la pantalla al inicio de la página.
+  const scrollToStep = useCallback((step) => {
+    if (typeof window === 'undefined') return;
+
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+
+    if (!isMobile) return;
+
+    if (scrollTimerRef.current) {
+      window.clearTimeout(scrollTimerRef.current);
+    }
+
+    scrollTimerRef.current = window.setTimeout(() => {
+      const target = stepRefs.current[step] || formCardRef.current;
+
+      if (!target) return;
+
+      const navbarOffset = 92;
+      const targetTop =
+        target.getBoundingClientRect().top + window.scrollY - navbarOffset;
+
+      window.scrollTo({
+        top: Math.max(targetTop, 0),
+        behavior: 'smooth'
+      });
+    }, 120);
+  }, []);
 
   const updateField = (field, value) => {
     setForm((prev) => ({
@@ -308,35 +354,87 @@ function ContactoPasoAPaso() {
 
   const handleOpenStep = (step) => {
     setOpenStep(step);
+    scrollToStep(step);
   };
 
   const handleNext = () => {
     const isValid = validateStep(currentStep);
-    if (!isValid) return;
 
-    if (currentStep < 5) {
-      const nextStep = currentStep + 1;
-      setCurrentStep(nextStep);
-      setOpenStep(nextStep);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!isValid) {
+      scrollToStep(currentStep);
       return;
     }
 
-    setSubmitted(true);
+    if (currentStep < 5) {
+      const nextStep = currentStep + 1;
+
+      setCurrentStep(nextStep);
+      setOpenStep(nextStep);
+      scrollToStep(nextStep);
+
+      return;
+    }
+
+    // Benjamin Orellana - 2026/04/24 - Muestra confirmación visual moderna al enviar la solicitud desde el formulario.
+    Swal.fire({
+      title: 'Solicitud enviada',
+      text: 'VALMAT recibió los datos del formulario correctamente.',
+      icon: 'success',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#16a34a',
+      background: '#ffffff',
+      color: '#0f172a',
+      customClass: {
+        popup: 'rounded-[28px]',
+        confirmButton: 'rounded-full px-6 py-3 font-semibold'
+      }
+    }).then(() => {
+      setSubmitted(true);
+
+      window.setTimeout(() => {
+        const target = sectionRef.current;
+
+        if (!target) return;
+
+        const targetTop =
+          target.getBoundingClientRect().top + window.scrollY - 92;
+
+        window.scrollTo({
+          top: Math.max(targetTop, 0),
+          behavior: 'smooth'
+        });
+      }, 100);
+    });
   };
 
   const handlePrev = () => {
     if (currentStep === 1) return;
+
     const prevStep = currentStep - 1;
+
     setCurrentStep(prevStep);
     setOpenStep(prevStep);
+    scrollToStep(prevStep);
+  };
+
+  const resetForm = () => {
+    setForm(INITIAL_FORM);
+    setErrors({});
+    setCurrentStep(1);
+    setOpenStep(1);
+    setSubmitted(false);
+
+    window.setTimeout(() => {
+      scrollToStep(1);
+    }, 80);
   };
 
   if (submitted) {
     return (
       <section
         id="contacto"
-        className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f4fbfe_58%,#ffffff_100%)] py-16 sm:py-20"
+        ref={sectionRef}
+        className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f4fbfe_58%,#ffffff_100%)] py-14 sm:py-20"
       >
         <div className="relative mx-auto w-full max-w-4xl px-5 sm:px-6 lg:px-8">
           <div className="overflow-hidden rounded-[34px] border border-sky-100 bg-white/88 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-8">
@@ -402,14 +500,8 @@ function ContactoPasoAPaso() {
 
             <button
               type="button"
-              onClick={() => {
-                setForm(INITIAL_FORM);
-                setErrors({});
-                setCurrentStep(1);
-                setOpenStep(1);
-                setSubmitted(false);
-              }}
-              className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 py-3.5 text-[0.92rem] font-semibold text-white shadow-[0_14px_30px_rgba(25,211,223,0.18)] transition-all duration-300 hover:bg-[var(--color-secondary)]"
+              onClick={resetForm}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--color-primary)] px-5 py-3.5 text-[0.92rem] font-semibold text-white shadow-[0_14px_30px_rgba(25,211,223,0.18)] transition-all duration-300 hover:bg-[var(--color-secondary)] active:scale-[0.98]"
             >
               Crear nueva solicitud
             </button>
@@ -422,7 +514,8 @@ function ContactoPasoAPaso() {
   return (
     <section
       id="contacto"
-      className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f4fbfe_58%,#ffffff_100%)] py-16 sm:py-20"
+      ref={sectionRef}
+      className="relative overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f4fbfe_58%,#ffffff_100%)] py-14 sm:py-20"
     >
       {/* Benjamin Orellana - 2026/04/23 - Fondo suave y moderno para la sección de contacto. */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -445,20 +538,23 @@ function ContactoPasoAPaso() {
           </h2>
         </div>
 
-        <div className="mt-10 overflow-hidden rounded-[32px] border border-sky-100 bg-white/88 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+        <div
+          ref={formCardRef}
+          className="mt-8 overflow-hidden rounded-[32px] border border-sky-100 bg-white/88 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:mt-10"
+        >
           {/* Benjamin Orellana - 2026/04/23 - El progreso se integra arriba del bloque principal y se elimina la columna lateral de pasos. */}
           <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[0.78rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-[0.78rem]">
                   Progreso
                 </p>
-                <h3 className="mt-1 text-[1.02rem] font-semibold text-slate-900">
+                <h3 className="mt-1 text-[1rem] font-semibold text-slate-900 sm:text-[1.02rem]">
                   Paso {currentStep} de 5
                 </h3>
               </div>
 
-              <div className="rounded-full border border-sky-100 bg-sky-50 px-3 py-1.5 text-[0.78rem] font-semibold text-sky-700">
+              <div className="rounded-full border border-sky-100 bg-sky-50 px-3 py-1.5 text-[0.76rem] font-semibold text-sky-700 sm:text-[0.78rem]">
                 {Math.round(progress)}%
               </div>
             </div>
@@ -473,25 +569,30 @@ function ContactoPasoAPaso() {
             </div>
           </div>
 
-          <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+          <div className="border-b border-slate-100 px-5 py-3.5 sm:px-6 sm:py-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[0.76rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-slate-400 sm:text-[0.76rem]">
                   VALMAT
                 </p>
-                <h3 className="mt-1 text-[1.08rem] font-semibold text-slate-900">
+                <h3 className="mt-1 text-[1.02rem] font-semibold text-slate-900 sm:text-[1.08rem]">
                   Formulario de contacto
                 </h3>
               </div>
 
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[0.76rem] font-semibold text-slate-500">
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[0.72rem] font-semibold text-slate-500 sm:text-[0.76rem]">
                 Paso a paso
               </div>
             </div>
           </div>
 
           <div>
-            <div className="border-b border-slate-100">
+            <div
+              ref={(element) => {
+                stepRefs.current[1] = element;
+              }}
+              className="border-b border-slate-100 scroll-mt-28"
+            >
               <StepHeader
                 stepNumber={1}
                 title="Datos personales"
@@ -536,7 +637,12 @@ function ContactoPasoAPaso() {
               </StepContainer>
             </div>
 
-            <div className="border-b border-slate-100">
+            <div
+              ref={(element) => {
+                stepRefs.current[2] = element;
+              }}
+              className="border-b border-slate-100 scroll-mt-28"
+            >
               <StepHeader
                 stepNumber={2}
                 title="Ubicación"
@@ -592,7 +698,12 @@ function ContactoPasoAPaso() {
               </StepContainer>
             </div>
 
-            <div className="border-b border-slate-100">
+            <div
+              ref={(element) => {
+                stepRefs.current[3] = element;
+              }}
+              className="border-b border-slate-100 scroll-mt-28"
+            >
               <StepHeader
                 stepNumber={3}
                 title="Servicio"
@@ -612,7 +723,7 @@ function ContactoPasoAPaso() {
                         type="button"
                         onClick={() => updateField('servicio', service.id)}
                         className={classNames(
-                          'rounded-[24px] border p-4 text-left transition-all duration-300',
+                          'rounded-[22px] border p-4 text-left transition-all duration-300 active:scale-[0.99]',
                           isSelected
                             ? 'border-sky-300 bg-sky-50/80 shadow-[0_14px_30px_rgba(25,211,223,0.10)]'
                             : 'border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/30'
@@ -642,7 +753,7 @@ function ContactoPasoAPaso() {
                   })}
 
                   {errors.servicio ? (
-                    <p className="text-[0.78rem] font-medium text-red-500">
+                    <p className="text-[0.76rem] font-medium text-red-500">
                       {errors.servicio}
                     </p>
                   ) : null}
@@ -652,7 +763,12 @@ function ContactoPasoAPaso() {
               </StepContainer>
             </div>
 
-            <div className="border-b border-slate-100">
+            <div
+              ref={(element) => {
+                stepRefs.current[4] = element;
+              }}
+              className="border-b border-slate-100 scroll-mt-28"
+            >
               <StepHeader
                 stepNumber={4}
                 title="Detalles del servicio"
@@ -671,8 +787,8 @@ function ContactoPasoAPaso() {
                     error={errors.metros}
                   />
 
-                  <div className="space-y-2">
-                    <label className="block text-[0.88rem] font-semibold text-slate-700">
+                  <div className="space-y-1.5">
+                    <label className="block text-[0.86rem] font-semibold text-slate-700">
                       Nivel de urgencia
                     </label>
 
@@ -686,9 +802,9 @@ function ContactoPasoAPaso() {
                             type="button"
                             onClick={() => updateField('urgencia', item)}
                             className={classNames(
-                              'rounded-2xl border px-3 py-3 text-[0.84rem] font-semibold transition-all duration-300',
+                              'rounded-2xl border px-3 py-3 text-[0.84rem] font-semibold transition-all duration-300 active:scale-[0.98]',
                               active
-                                ? 'border-sky-300 bg-sky-50 text-sky-700'
+                                ? 'border-sky-300 bg-sky-50 text-sky-700 shadow-[0_10px_20px_rgba(14,165,233,0.08)]'
                                 : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200'
                             )}
                           >
@@ -715,7 +831,12 @@ function ContactoPasoAPaso() {
               </StepContainer>
             </div>
 
-            <div>
+            <div
+              ref={(element) => {
+                stepRefs.current[5] = element;
+              }}
+              className="scroll-mt-28"
+            >
               <StepHeader
                 stepNumber={5}
                 title="Fechas y horarios"
@@ -736,8 +857,8 @@ function ContactoPasoAPaso() {
                       error={errors.fecha}
                     />
 
-                    <div className="space-y-2">
-                      <label className="block text-[0.88rem] font-semibold text-slate-700">
+                    <div className="space-y-1.5">
+                      <label className="block text-[0.86rem] font-semibold text-slate-700">
                         Franja horaria{' '}
                         <span className="ml-1 text-sky-600">*</span>
                       </label>
@@ -752,9 +873,9 @@ function ContactoPasoAPaso() {
                               type="button"
                               onClick={() => updateField('franja', item)}
                               className={classNames(
-                                'rounded-2xl border px-3 py-3 text-[0.84rem] font-semibold transition-all duration-300',
+                                'rounded-2xl border px-3 py-3 text-[0.84rem] font-semibold transition-all duration-300 active:scale-[0.98]',
                                 active
-                                  ? 'border-sky-300 bg-sky-50 text-sky-700'
+                                  ? 'border-sky-300 bg-sky-50 text-sky-700 shadow-[0_10px_20px_rgba(14,165,233,0.08)]'
                                   : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200'
                               )}
                             >
@@ -765,15 +886,15 @@ function ContactoPasoAPaso() {
                       </div>
 
                       {errors.franja ? (
-                        <p className="text-[0.78rem] font-medium text-red-500">
+                        <p className="text-[0.76rem] font-medium text-red-500">
                           {errors.franja}
                         </p>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-[0.88rem] font-semibold text-slate-700">
+                  <div className="space-y-1.5">
+                    <label className="block text-[0.86rem] font-semibold text-slate-700">
                       Días disponibles{' '}
                       <span className="ml-1 text-sky-600">*</span>
                     </label>
@@ -788,9 +909,9 @@ function ContactoPasoAPaso() {
                             type="button"
                             onClick={() => toggleDia(day)}
                             className={classNames(
-                              'rounded-2xl border px-3 py-3 text-[0.84rem] font-semibold transition-all duration-300',
+                              'rounded-2xl border px-3 py-3 text-[0.84rem] font-semibold transition-all duration-300 active:scale-[0.98]',
                               active
-                                ? 'border-sky-300 bg-sky-50 text-sky-700'
+                                ? 'border-sky-300 bg-sky-50 text-sky-700 shadow-[0_10px_20px_rgba(14,165,233,0.08)]'
                                 : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200'
                             )}
                           >
@@ -801,7 +922,7 @@ function ContactoPasoAPaso() {
                     </div>
 
                     {errors.dias ? (
-                      <p className="text-[0.78rem] font-medium text-red-500">
+                      <p className="text-[0.76rem] font-medium text-red-500">
                         {errors.dias}
                       </p>
                     ) : null}

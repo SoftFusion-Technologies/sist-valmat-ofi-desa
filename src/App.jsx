@@ -1,23 +1,56 @@
-import Navbar from './components/Navbar';
+// Benjamin Orellana - 2026/04/24 - App principal con rutas internas. El BrowserRouter queda únicamente en main.jsx para evitar Router anidado.
+
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+
 import logoValmat from './Images/logo_1.png';
-import Hero from './sections/Hero';
-import Servicios from './sections/Servicios';
-import ServicesVideosShowcase from './components/sections/ServicesVideosShowcase';
-import Footer from './components/Footer';
-import Contacto from './sections/Contacto';
-import Cobertura from './sections/Cobertura';
-import ValmatProceso from './components/ValmatProceso';
+import Home from './pages/Home';
+import ServicioDetalle from './pages/ServicioDetalle';
+
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const timer = setTimeout(() => {
+        const element = document.querySelector(hash);
+
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 120);
+
+      return () => clearTimeout(timer);
+    }
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant'
+    });
+  }, [pathname, hash]);
+
+  return null;
+}
+
 function App() {
   return (
     <>
-      <Navbar logoSrc={logoValmat} />
-      <Hero></Hero>
-      <Servicios />
-      <ValmatProceso/>
-      <ServicesVideosShowcase />
-      <Cobertura></Cobertura>
-      <Contacto></Contacto>
-      <Footer logoSrc={logoValmat} />
+      <ScrollToTop />
+
+      <Routes>
+        <Route path="/" element={<Home logoSrc={logoValmat} />} />
+
+        <Route
+          path="/servicios/:slug"
+          element={<ServicioDetalle logoSrc={logoValmat} />}
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </>
   );
 }

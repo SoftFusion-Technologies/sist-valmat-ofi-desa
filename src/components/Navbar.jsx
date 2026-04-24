@@ -1,6 +1,8 @@
 // Benjamin Orellana - 2026/04/21 - Navbar institucional moderna, responsive y con microinteracciones premium para VALMAT.
+// Benjamin Orellana - 2026/04/24 - Se corrige navegación interna para que desde páginas de servicios vuelva correctamente al Home usando rutas /#seccion.
 
 import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   HiBars3,
   HiXMark,
@@ -10,10 +12,10 @@ import {
 import { FaInstagram, FaFacebookF, FaWhatsapp } from 'react-icons/fa';
 
 const NAV_ITEMS = [
-  { label: 'Inicio', href: '#inicio' },
-  { label: 'Servicios', href: '#servicios' },
-  { label: 'Cobertura', href: '#cobertura' },
-  { label: 'Contacto', href: '#contacto' }
+  { label: 'Inicio', href: '/#inicio', hash: '#inicio' },
+  { label: 'Servicios', href: '/#servicios', hash: '#servicios' },
+  { label: 'Cobertura', href: '/#cobertura', hash: '#cobertura' },
+  { label: 'Contacto', href: '/#contacto', hash: '#contacto' }
 ];
 
 // Benjamin Orellana - 2026/04/22 - Accesos rápidos institucionales para redes y medios de contacto de VALMAT.
@@ -41,6 +43,8 @@ const SOCIAL_ITEMS = [
 ];
 
 function Navbar({ logoSrc, brand = 'VALMAT' }) {
+  const location = useLocation();
+
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -65,8 +69,22 @@ function Navbar({ logoSrc, brand = 'VALMAT' }) {
     };
   }, [open]);
 
+  useEffect(() => {
+    // Benjamin Orellana - 2026/04/24 - Cierra automáticamente el menú mobile al cambiar de ruta o hash.
+    setOpen(false);
+  }, [location.pathname, location.hash]);
+
   // Benjamin Orellana - 2026/04/22 - Cierra el menú mobile reutilizando un único handler para mantener consistente la experiencia.
   const handleCloseMenu = () => setOpen(false);
+
+  // Benjamin Orellana - 2026/04/24 - Detecta sección activa cuando el usuario está en Home.
+  const isActiveItem = (item) => {
+    if (location.pathname !== '/') return false;
+
+    if (!location.hash && item.hash === '#inicio') return true;
+
+    return location.hash === item.hash;
+  };
 
   return (
     <>
@@ -79,8 +97,8 @@ function Navbar({ logoSrc, brand = 'VALMAT' }) {
       >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-6 lg:px-8 lg:py-5">
           {/* Benjamin Orellana - 2026/04/21 - Marca principal con presencia visual y microinteracción sobria. */}
-          <a
-            href="#inicio"
+          <Link
+            to="/#inicio"
             className="group flex min-w-0 items-center gap-3 rounded-2xl px-1 py-1 transition-all duration-300"
             onClick={handleCloseMenu}
             aria-label="Ir al inicio"
@@ -106,18 +124,26 @@ function Navbar({ logoSrc, brand = 'VALMAT' }) {
                 Servicios de limpieza profesional
               </span>
             </div>
-          </a>
+          </Link>
 
-          <nav className="hidden items-center gap-9 lg:flex">
-            {NAV_ITEMS.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="cuerpo relative text-[0.95rem] font-semibold text-slate-700 transition-all duration-300 hover:-translate-y-[1px] hover:text-slate-950 after:absolute after:-bottom-2 after:left-0 after:h-[2px] after:w-0 after:rounded-full after:bg-[var(--color-primary)] after:transition-all after:duration-300 hover:after:w-full"
-              >
-                {item.label}
-              </a>
-            ))}
+          <nav className="hidden items-center gap-8 lg:flex">
+            {NAV_ITEMS.map((item) => {
+              const active = isActiveItem(item);
+
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={`cuerpo relative rounded-full px-1 py-2 text-[0.95rem] font-semibold transition-all duration-300 hover:-translate-y-[1px] after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:rounded-full after:bg-[var(--color-primary)] after:transition-all after:duration-300 ${
+                    active
+                      ? 'text-[var(--color-primary)] after:w-full'
+                      : 'text-slate-700 hover:text-slate-950 after:w-0 hover:after:w-full'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="hidden items-center gap-4 lg:flex">
@@ -141,12 +167,12 @@ function Navbar({ logoSrc, brand = 'VALMAT' }) {
               })}
             </div>
 
-            <a
-              href="#contacto"
+            <Link
+              to="/#contacto"
               className="cuerpo inline-flex items-center justify-center rounded-full border border-[var(--color-primary)] bg-white px-5 py-3 text-[0.95rem] font-semibold text-[var(--color-primary)] shadow-[0_10px_30px_rgba(25,211,223,0.10)] transition-all duration-300 hover:-translate-y-[2px] hover:scale-[1.02] hover:bg-[var(--color-primary)] hover:text-white hover:shadow-[0_18px_38px_rgba(25,211,223,0.22)]"
             >
               Solicitar contacto
-            </a>
+            </Link>
           </div>
 
           <button
@@ -190,14 +216,14 @@ function Navbar({ logoSrc, brand = 'VALMAT' }) {
                   </p>
                 </div>
 
-                <a
-                  href="#contacto"
+                <Link
+                  to="/#contacto"
                   onClick={handleCloseMenu}
                   className="cuerpo inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-2.5 text-[0.84rem] font-semibold text-white shadow-[0_12px_28px_rgba(25,211,223,0.22)] transition-all duration-300 active:scale-[0.98]"
                 >
                   Contacto
                   <HiArrowUpRight className="text-[0.95rem]" />
-                </a>
+                </Link>
               </div>
 
               <div className="mb-6 rounded-[24px] border border-slate-200/80 bg-white/90 p-3 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
@@ -231,29 +257,49 @@ function Navbar({ logoSrc, brand = 'VALMAT' }) {
               </div>
 
               <nav className="flex flex-col gap-3">
-                {NAV_ITEMS.map((item, index) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={handleCloseMenu}
-                    className="group overflow-hidden rounded-[24px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_14px_28px_rgba(15,23,42,0.05)] transition-all duration-300 active:scale-[0.99] active:border-[var(--color-primary)]"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <span className="cuerpo block text-[1rem] font-semibold text-slate-900">
-                          {item.label}
-                        </span>
-                        <span className="cuerpo mt-1 block text-[0.78rem] text-slate-500">
-                          Sección {String(index + 1).padStart(2, '0')}
+                {NAV_ITEMS.map((item, index) => {
+                  const active = isActiveItem(item);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={handleCloseMenu}
+                      className={`group overflow-hidden rounded-[24px] border px-4 py-4 shadow-[0_14px_28px_rgba(15,23,42,0.05)] transition-all duration-300 active:scale-[0.99] ${
+                        active
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/8'
+                          : 'border-slate-200/80 bg-white active:border-[var(--color-primary)]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <span
+                            className={`cuerpo block text-[1rem] font-semibold ${
+                              active
+                                ? 'text-[var(--color-primary)]'
+                                : 'text-slate-900'
+                            }`}
+                          >
+                            {item.label}
+                          </span>
+                          <span className="cuerpo mt-1 block text-[0.78rem] text-slate-500">
+                            Sección {String(index + 1).padStart(2, '0')}
+                          </span>
+                        </div>
+
+                        <span
+                          className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-300 group-active:border-[var(--color-primary)] group-active:bg-[var(--color-primary)] group-active:text-white ${
+                            active
+                              ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
+                              : 'border-slate-200 bg-slate-50 text-slate-400'
+                          }`}
+                        >
+                          <HiArrowUpRight className="text-[1rem]" />
                         </span>
                       </div>
-
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-400 transition-all duration-300 group-active:border-[var(--color-primary)] group-active:bg-[var(--color-primary)] group-active:text-white">
-                        <HiArrowUpRight className="text-[1rem]" />
-                      </span>
-                    </div>
-                  </a>
-                ))}
+                    </Link>
+                  );
+                })}
               </nav>
 
               <div className="mt-6 rounded-[24px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_14px_28px_rgba(15,23,42,0.05)]">

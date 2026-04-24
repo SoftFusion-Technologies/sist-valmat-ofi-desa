@@ -1,9 +1,28 @@
-import React from 'react'
+// Benjamin Orellana - 2026/04/24 - Home concentra toda la landing principal de VALMAT.
 
-const Home = () => {
+import React from 'react';
+import Navbar from '../components/Navbar';
+import Hero from '../sections/Hero';
+import Servicios from '../sections/Servicios';
+import ServicesVideosShowcase from '../components/sections/ServicesVideosShowcase';
+import Footer from '../components/Footer';
+import Contacto from '../sections/Contacto';
+import Cobertura from '../sections/Cobertura';
+import ValmatProceso from '../components/ValmatProceso';
+
+const Home = ({ logoSrc }) => {
   return (
-    <div>Home</div>
-  )
-}
+    <>
+      <Navbar logoSrc={logoSrc} />
+      <Hero />
+      <Servicios />
+      <ValmatProceso />
+      <ServicesVideosShowcase />
+      <Cobertura />
+      <Contacto />
+      <Footer logoSrc={logoSrc} />
+    </>
+  );
+};
 
-export default Home
+export default Home;
