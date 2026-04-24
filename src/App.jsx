@@ -6,12 +6,14 @@ import ServicesVideosShowcase from './components/sections/ServicesVideosShowcase
 import Footer from './components/Footer';
 import Contacto from './sections/Contacto';
 import Cobertura from './sections/Cobertura';
+import ValmatProceso from './components/ValmatProceso';
 function App() {
   return (
     <>
       <Navbar logoSrc={logoValmat} />
       <Hero></Hero>
       <Servicios />
+      <ValmatProceso/>
       <ServicesVideosShowcase />
       <Cobertura></Cobertura>
       <Contacto></Contacto>
