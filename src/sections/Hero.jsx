@@ -267,6 +267,163 @@ function HeroImageCard({ src, alt, tag, className = '', floating = false }) {
   );
 }
 
+// Benjamin Orellana - 2026/04/23 - Contador animado con soporte para formato de miles y valores finales pequeños como años de experiencia.
+function AnimatedCounter({
+  end = 5000,
+  duration = 2200,
+  prefix = '+',
+  suffix = '',
+  format = false
+}) {
+  const counterRef = useRef(null);
+  const frameRef = useRef(null);
+  const [value, setValue] = useState(0);
+  const [started, setStarted] = useState(false);
+
+  const formattedValue = format
+    ? new Intl.NumberFormat('es-AR').format(value)
+    : value;
+
+  useEffect(() => {
+    const element = counterRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStarted(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.35 }
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Benjamin Orellana - 2026/04/23 - Ajusta la animación para que los números pequeños suban paso a paso sin saltar directo al valor final.
+  useEffect(() => {
+    if (!started) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    if (prefersReducedMotion) {
+      setValue(end);
+      return;
+    }
+
+    if (end <= 20) {
+      let current = 0;
+      const stepDuration = Math.max(duration / end, 120);
+
+      const interval = window.setInterval(() => {
+        current += 1;
+        setValue(current);
+
+        if (current >= end) {
+          window.clearInterval(interval);
+        }
+      }, stepDuration);
+
+      return () => window.clearInterval(interval);
+    }
+
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const nextValue = Math.floor(easedProgress * end);
+
+      setValue(nextValue);
+
+      if (progress < 1) {
+        frameRef.current = window.requestAnimationFrame(animate);
+      } else {
+        setValue(end);
+      }
+    };
+
+    frameRef.current = window.requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, [started, end, duration]);
+  return (
+    <span ref={counterRef}>
+      {prefix}
+      {formattedValue}
+      {suffix}
+    </span>
+  );
+}
+
+// Benjamin Orellana - 2026/04/23 - Métricas comerciales debajo de los botones principales del Hero.
+function HeroMetrics() {
+  return (
+    <motion.div
+      custom={0.42}
+      variants={fadeUp}
+      initial="hidden"
+      animate="show"
+      className="mt-7 grid w-full max-w-xl grid-cols-2 gap-3 sm:mt-8 sm:max-w-lg"
+    >
+      <motion.div
+        whileHover={{ y: -3, scale: 1.015 }}
+        transition={{ duration: 0.25 }}
+        className="group relative overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/82 px-4 py-4 shadow-[0_18px_42px_rgba(15,23,42,0.07)] backdrop-blur-xl sm:px-5 sm:py-5"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,0.16),transparent_42%)] opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+
+        <div className="relative">
+          <p className="titulo text-[2rem] font-black leading-none tracking-[-0.06em] text-slate-950 sm:text-[2.35rem]">
+            <AnimatedCounter
+              end={5000}
+              duration={2400}
+              prefix="+"
+              format
+            />{' '}
+          </p>
+
+          <p className="cuerpo mt-2 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-500 sm:text-[0.76rem]">
+            servicios realizados
+          </p>
+        </div>
+      </motion.div>
+
+      <motion.div
+        whileHover={{ y: -3, scale: 1.015 }}
+        transition={{ duration: 0.25 }}
+        className="group relative overflow-hidden rounded-[26px] border border-slate-200/80 bg-white/82 px-4 py-4 shadow-[0_18px_42px_rgba(15,23,42,0.07)] backdrop-blur-xl sm:px-5 sm:py-5"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.09),transparent_42%)] opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+
+        <div className="relative">
+          <p className="titulo text-[2rem] font-black leading-none tracking-[-0.06em] text-slate-950 sm:text-[2.35rem]">
+            <AnimatedCounter end={6} duration={1300} prefix="+" />{' '}
+            <span className="text-[1.15rem] tracking-[-0.04em] sm:text-[1.35rem]">
+              Años
+            </span>
+          </p>
+
+          <p className="cuerpo mt-2 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-500 sm:text-[0.76rem]">
+            de experiencia
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function Hero() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -385,12 +542,13 @@ function Hero() {
               href="https://wa.me/543815695970"
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.99 }}
-              target='_blank'
+              target="_blank"
               className="cuerpo inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-900 shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition-all duration-300 hover:border-slate-900 hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
             >
               WhatsApp
             </motion.a>
           </motion.div>
+          <HeroMetrics />
         </div>
 
         <motion.div
