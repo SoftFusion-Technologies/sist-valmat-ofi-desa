@@ -262,7 +262,8 @@ export default function Dashboard() {
       title: 'Sucursales',
       description:
         'Administración de bases operativas y cobertura de servicio.',
-      label: 'SU'
+      label: 'SU',
+      route: '/dashboard/sucursales'
     },
     {
       title: 'Clientes',
@@ -570,7 +571,14 @@ export default function Dashboard() {
                   <button
                     key={module.title}
                     type="button"
-                    className="group rounded-[26px] border border-slate-200 bg-white p-4 text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-xl hover:shadow-cyan-100/50"
+                    onClick={() => {
+                      if (module.route) {
+                        navigate(module.route);
+                      }
+                    }}
+                    className={`group rounded-[26px] border border-slate-200 bg-white p-4 text-left shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-xl hover:shadow-cyan-100/50 ${
+                      module.route ? 'cursor-pointer' : 'cursor-default'
+                    }`}
                   >
                     <div className="flex items-start gap-4">
                       <ModuleGlyph label={module.label} />
@@ -587,9 +595,14 @@ export default function Dashboard() {
                         <p className="mt-2 text-sm leading-5 text-slate-500">
                           {module.description}
                         </p>
-
-                        <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-                          Próximamente
+                        <span
+                          className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                            module.route
+                              ? 'bg-cyan-50 text-cyan-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {module.route ? 'Disponible' : 'Próximamente'}
                         </span>
                       </div>
                     </div>

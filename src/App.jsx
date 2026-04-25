@@ -15,6 +15,9 @@ import Dashboard from './pages/Dashboard';
 
 import ProtectedRoute from './Auth/ProtectedRoute';
 
+import SucursalesAdmin from './pages/Gets/Core/SucursalesAdmin';
+
+
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
@@ -67,6 +70,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard logoSrc={logoValmat} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/sucursales"
+          element={
+            <ProtectedRoute>
+              <SucursalesAdmin />
             </ProtectedRoute>
           }
         />
