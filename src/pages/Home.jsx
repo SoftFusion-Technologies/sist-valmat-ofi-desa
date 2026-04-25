@@ -20,7 +20,7 @@ const Home = ({ logoSrc }) => {
       <ServicesVideosShowcase />
       <Cobertura />
       <Contacto />
-      <Footer logoSrc={logoSrc} />
+      {/* <Footer logoSrc={logoSrc} /> */}
     </>
   );
 };

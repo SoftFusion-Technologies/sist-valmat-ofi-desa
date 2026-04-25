@@ -17,6 +17,7 @@ import ProtectedRoute from './Auth/ProtectedRoute';
 
 import SucursalesAdmin from './pages/Gets/Core/SucursalesAdmin';
 import UsuariosAdmin from './pages/Gets/Core/UsuariosAdmin';
+import Footer from './components/Footer';
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -92,6 +93,7 @@ function App() {
         />
         <Route path="*" element={<NotFound logoSrc={logoValmat} />} />
       </Routes>
+      <Footer logoSrc={logoValmat} />
     </>
   );
 }

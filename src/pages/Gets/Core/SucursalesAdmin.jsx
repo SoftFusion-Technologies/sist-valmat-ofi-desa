@@ -6,19 +6,27 @@ import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import {
   ArrowLeft,
+  Ban,
   Building2,
+  CheckCircle2,
+  ChevronsUpDown,
+  Crown,
+  Eye,
+  Filter,
+  LayoutGrid,
   Mail,
   MapPin,
   Pencil,
   Phone,
   Plus,
+  RefreshCw,
+  RotateCcw,
   Search,
+  ShieldCheck,
+  Table2,
   Trash2,
   Users,
-  X,
-  ShieldCheck,
-  Crown,
-  RefreshCw
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../Auth/AuthContext';
@@ -121,6 +129,83 @@ const showSuccess = async (message) => {
   });
 };
 
+// Benjamin Orellana - 25/04/2026 - Metadatos visuales centralizados para mejorar legibilidad de estados.
+const STATUS_META = {
+  ACTIVA: {
+    label: 'Activa',
+    icon: CheckCircle2,
+    pill: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    dot: 'bg-emerald-500',
+    card: 'from-emerald-50/90 to-white'
+  },
+  INACTIVA: {
+    label: 'Inactiva',
+    icon: Ban,
+    pill: 'bg-slate-100 text-slate-600 ring-slate-200',
+    dot: 'bg-slate-400',
+    card: 'from-slate-50/95 to-white'
+  }
+};
+
+const getStatusMeta = (estado) => {
+  return (
+    STATUS_META[estado] || {
+      label: estado || 'Sin estado',
+      icon: Building2,
+      pill: 'bg-slate-100 text-slate-600 ring-slate-200',
+      dot: 'bg-slate-400',
+      card: 'from-slate-50/95 to-white'
+    }
+  );
+};
+
+const sortText = (value) => {
+  return String(value || '').toLowerCase();
+};
+
+const SucursalStatusPill = ({ estado }) => {
+  const meta = getStatusMeta(estado);
+  const Icon = meta.icon;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ring-1 ${meta.pill}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+      <Icon className="h-3.5 w-3.5" />
+      {meta.label}
+    </span>
+  );
+};
+
+const SucursalSkeleton = () => {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {[1, 2, 3, 4].map((item) => (
+        <article
+          key={item}
+          className="overflow-hidden rounded-[30px] border border-white bg-white/80 p-5 shadow-sm"
+        >
+          <div className="flex gap-4">
+            <div className="h-14 w-14 animate-pulse rounded-2xl bg-slate-100" />
+
+            <div className="flex-1">
+              <div className="h-4 w-2/3 animate-pulse rounded-full bg-slate-100" />
+              <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-slate-100" />
+              <div className="mt-2 h-3 w-4/5 animate-pulse rounded-full bg-slate-100" />
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+            <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+};
+
 export default function SucursalesAdmin() {
   const navigate = useNavigate();
   const { authToken } = useAuth();
@@ -129,13 +214,19 @@ export default function SucursalesAdmin() {
   const [loading, setLoading] = useState(true);
 
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [estado, setEstado] = useState('');
+
+  const [viewMode, setViewMode] = useState('table');
+  const [sortBy, setSortBy] = useState('nombre');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingSucursal, setEditingSucursal] = useState(null);
 
   const [usersOpen, setUsersOpen] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersQ, setUsersQ] = useState('');
   const [selectedSucursal, setSelectedSucursal] = useState(null);
   const [selectedUsers, setSelectedUsers] = useState([]);
 
@@ -150,6 +241,15 @@ export default function SucursalesAdmin() {
 
     return baseHeaders;
   }, [authToken]);
+
+  // Benjamin Orellana - 25/04/2026 - Se agrega debounce para evitar consultas innecesarias mientras el usuario escribe.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedQ(q.trim());
+    }, 380);
+
+    return () => clearTimeout(timeout);
+  }, [q]);
 
   const stats = useMemo(() => {
     const total = sucursales.length;
@@ -171,6 +271,63 @@ export default function SucursalesAdmin() {
       usuarios
     };
   }, [sucursales]);
+
+  const filtrosActivos = useMemo(() => {
+    return Boolean(q.trim() || estado);
+  }, [estado, q]);
+
+  const sucursalesOrdenadas = useMemo(() => {
+    const ordered = [...sucursales].sort((a, b) => {
+      let left = '';
+      let right = '';
+
+      if (sortBy === 'usuarios') {
+        left = getUsersCount(a);
+        right = getUsersCount(b);
+      } else if (sortBy === 'estado') {
+        left = sortText(a.estado);
+        right = sortText(b.estado);
+      } else if (sortBy === 'localidad') {
+        left = sortText(`${a.localidad || ''} ${a.provincia || ''}`);
+        right = sortText(`${b.localidad || ''} ${b.provincia || ''}`);
+      } else {
+        left = sortText(a.nombre);
+        right = sortText(b.nombre);
+      }
+
+      if (typeof left === 'number' && typeof right === 'number') {
+        return sortDirection === 'asc' ? left - right : right - left;
+      }
+
+      return sortDirection === 'asc'
+        ? String(left).localeCompare(String(right))
+        : String(right).localeCompare(String(left));
+    });
+
+    return ordered;
+  }, [sortBy, sortDirection, sucursales]);
+
+  const selectedUsersFiltered = useMemo(() => {
+    const search = usersQ.trim().toLowerCase();
+
+    if (!search) return selectedUsers;
+
+    return selectedUsers.filter((usuario) => {
+      const searchable = [
+        usuario.nombre,
+        usuario.apellido,
+        usuario.email,
+        usuario.telefono,
+        usuario.rol_global,
+        usuario.estado
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(search);
+    });
+  }, [selectedUsers, usersQ]);
 
   const request = useCallback(
     async (endpoint, options = {}) => {
@@ -201,35 +358,38 @@ export default function SucursalesAdmin() {
     [headers]
   );
 
-  const fetchSucursales = useCallback(async () => {
-    setLoading(true);
+  const fetchSucursales = useCallback(
+    async (searchOverride) => {
+      setLoading(true);
 
-    try {
-      const params = new URLSearchParams();
+      try {
+        const params = new URLSearchParams();
+        const searchValue =
+          typeof searchOverride === 'string'
+            ? searchOverride.trim()
+            : debouncedQ;
 
-      params.set('incluir_usuarios', 'true');
+        params.set('incluir_usuarios', 'true');
 
-      if (q.trim()) params.set('q', q.trim());
-      if (estado) params.set('estado', estado);
+        if (searchValue) params.set('q', searchValue);
+        if (estado) params.set('estado', estado);
 
-      const data = await request(`/sucursales?${params.toString()}`, {
-        method: 'GET'
-      });
+        const data = await request(`/sucursales?${params.toString()}`, {
+          method: 'GET'
+        });
 
-      setSucursales(Array.isArray(data?.sucursales) ? data.sucursales : []);
-    } catch (error) {
-      await showError(getErrorMessage(error, 'Error al obtener sucursales.'));
-    } finally {
-      setLoading(false);
-    }
-  }, [estado, q, request]);
+        setSucursales(Array.isArray(data?.sucursales) ? data.sucursales : []);
+      } catch (error) {
+        await showError(getErrorMessage(error, 'Error al obtener sucursales.'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [debouncedQ, estado, request]
+  );
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      fetchSucursales();
-    }, 50);
-
-    return () => clearTimeout(timeout);
+    fetchSucursales();
   }, [fetchSucursales]);
 
   const openCreate = () => {
@@ -261,7 +421,7 @@ export default function SucursalesAdmin() {
       body: JSON.stringify(payload)
     });
 
-    await fetchSucursales();
+    await fetchSucursales(q);
   };
 
   const handleDelete = async (sucursal) => {
@@ -291,7 +451,7 @@ export default function SucursalesAdmin() {
         method: 'DELETE'
       });
 
-      await fetchSucursales();
+      await fetchSucursales(q);
       await showSuccess('Sucursal eliminada correctamente.');
     } catch (error) {
       await showError(
@@ -303,6 +463,7 @@ export default function SucursalesAdmin() {
   const openUsuarios = async (sucursal) => {
     setSelectedSucursal(sucursal);
     setUsersOpen(true);
+    setUsersQ('');
 
     const usuariosPrecargados = Array.isArray(sucursal?.usuarios)
       ? sucursal.usuarios
@@ -338,279 +499,608 @@ export default function SucursalesAdmin() {
   const closeUsuarios = () => {
     setUsersOpen(false);
     setUsersLoading(false);
+    setUsersQ('');
     setSelectedSucursal(null);
     setSelectedUsers([]);
   };
 
-  return (
-    <main className="min-h-screen bg-[#eef6fb] text-[var(--color-text)] cuerpo">
-      <section className="relative overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(90,151,208,.12),transparent_32%)]" />
+  const resetFilters = () => {
+    setQ('');
+    setDebouncedQ('');
+    setEstado('');
+  };
 
-        <div className="absolute inset-0 opacity-[0.34] [background-image:linear-gradient(rgba(217,226,232,.70)_1px,transparent_1px),linear-gradient(90deg,rgba(217,226,232,.70)_1px,transparent_1px)] [background-size:54px_54px]" />
+  const handleSort = (key) => {
+    if (sortBy === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
 
-        <div className="relative z-10 mx-auto max-w-7xl">
-          <header className="mb-5 flex flex-col gap-4 rounded-[32px] border border-white bg-white/85 p-5 shadow-sm backdrop-blur-xl sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--color-border)] bg-white text-slate-700 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                aria-label="Volver al dashboard"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
+    setSortBy(key);
+    setSortDirection('asc');
+  };
 
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--color-primary)]">
-                  Core administrativo
-                </p>
+  const statCards = [
+    {
+      label: 'Sucursales cargadas',
+      value: stats.total,
+      helper: 'Resultado actual',
+      icon: Building2,
+      className: 'text-slate-950',
+      bg: 'bg-slate-950'
+    },
+    {
+      label: 'Activas',
+      value: stats.activas,
+      helper: 'Operativas',
+      icon: CheckCircle2,
+      className: 'text-emerald-600',
+      bg: 'bg-emerald-500'
+    },
+    {
+      label: 'Inactivas',
+      value: stats.inactivas,
+      helper: 'Pausadas',
+      icon: Ban,
+      className: 'text-slate-500',
+      bg: 'bg-slate-400'
+    },
+    {
+      label: 'Usuarios asignados',
+      value: stats.usuarios,
+      helper: 'Entre sucursales',
+      icon: Users,
+      className: 'text-[var(--color-primary)]',
+      bg: 'bg-[var(--color-primary)]'
+    }
+  ];
 
-                <h1 className="titulo uppercase mt-1 text-4xl leading-none tracking-[-0.045em] text-slate-950 sm:text-5xl">
-                  Sucursales
-                </h1>
+  const renderSucursalCard = (sucursal, index = 0) => {
+    const meta = getStatusMeta(sucursal.estado);
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-soft)]">
-                  Gestioná las bases operativas de VALMAT, ubicación, contacto,
-                  estado y usuarios asignados.
+    return (
+      <motion.article
+        key={sucursal.id}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.38, delay: Math.min(index * 0.035, 0.18) }}
+        className="group relative overflow-hidden rounded-[30px] border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-[0_24px_70px_rgba(25,211,223,.16)]"
+      >
+        <div
+          className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${meta.card}`}
+        />
+
+        <div className="relative p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 gap-4">
+              <div className="relative grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white text-[var(--color-primary)] shadow-sm ring-1 ring-cyan-100">
+                <Building2 className="h-6 w-6" />
+                <span
+                  className={`absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-white ${meta.dot}`}
+                />
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-lg font-black tracking-[-0.03em] text-slate-950">
+                    {sucursal.nombre}
+                  </h3>
+
+                  <SucursalStatusPill estado={sucursal.estado} />
+                </div>
+
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
+                  {sucursal.descripcion || 'Sin descripción registrada.'}
                 </p>
               </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openEdit(sucursal)}
+                className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                aria-label="Editar sucursal"
+              >
+                <Pencil className="h-[18px] w-[18px]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDelete(sucursal)}
+                className="grid h-10 w-10 place-items-center rounded-2xl border border-red-100 bg-red-50 text-red-500 shadow-sm transition hover:bg-red-100 hover:text-red-700"
+                aria-label="Eliminar sucursal"
+              >
+                <Trash2 className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-white/90 px-4 py-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                Ubicación
+              </p>
+
+              <p className="mt-1 text-sm font-black text-slate-900">
+                {sucursal.localidad || 'Sin localidad'}
+              </p>
+
+              <p className="text-xs font-semibold text-slate-500">
+                {sucursal.provincia || 'Sin provincia'}
+              </p>
             </div>
 
             <button
               type="button"
-              onClick={openCreate}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.25)] transition hover:-translate-y-0.5 hover:bg-[var(--color-secondary)]"
+              onClick={() => openUsuarios(sucursal)}
+              className="rounded-2xl border border-cyan-100 bg-cyan-50/60 px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-cyan-50 hover:ring-2 hover:ring-cyan-100"
             >
-              <Plus className="h-5 w-5" />
-              Nueva sucursal
-            </button>
-          </header>
-
-          <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">
-                Total sucursales
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                Usuarios
               </p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950">
-                {stats.total}
-              </p>
-            </article>
 
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">Activas</p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-emerald-600">
-                {stats.activas}
-              </p>
-            </article>
-
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">Inactivas</p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-500">
-                {stats.inactivas}
-              </p>
-            </article>
-
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">
-                Usuarios asignados
-              </p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-[var(--color-primary)]">
-                {stats.usuarios}
-              </p>
-            </article>
-          </section>
-
-          <section className="rounded-[32px] border border-white bg-white/86 p-4 shadow-sm backdrop-blur-xl sm:p-5">
-            <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_220px_auto]">
-              <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition focus-within:border-[var(--color-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(25,211,223,.10)]">
-                <Search className="h-5 w-5 shrink-0 text-[var(--color-secondary)]" />
-
-                <input
-                  value={q}
-                  onChange={(event) => setQ(event.target.value)}
-                  placeholder="Buscar por nombre, localidad, provincia, teléfono o email"
-                  className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                />
+              <div className="mt-1 flex items-center gap-2 text-sm font-black text-slate-900">
+                <Users className="h-4 w-4 text-[var(--color-primary)]" />
+                {getUsersCount(sucursal)} asignados
               </div>
 
-              <select
-                value={estado}
-                onChange={(event) => setEstado(event.target.value)}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
-              >
-                <option value="">Todos los estados</option>
-                <option value="ACTIVA">Activas</option>
-                <option value="INACTIVA">Inactivas</option>
-              </select>
+              <p className="mt-1 inline-flex items-center gap-1 text-xs font-black text-[var(--color-primary)]">
+                Ver detalle
+                <Eye className="h-3.5 w-3.5" />
+              </p>
+            </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={fetchSucursales}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-                />
-                Actualizar
-              </button>
+          <div className="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+            <div className="flex gap-2 text-sm font-semibold text-slate-700">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+              <span>{sucursal.direccion || 'Sin dirección registrada'}</span>
             </div>
 
-            {loading ? (
-              <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-dashed border-slate-200 bg-white/70">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="h-11 w-11 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)]" />
-                  <p className="text-sm font-semibold text-slate-500">
-                    Cargando sucursales...
-                  </p>
-                </div>
-              </div>
-            ) : sucursales.length === 0 ? (
-              <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-dashed border-slate-200 bg-white/70 p-6 text-center">
-                <div>
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-cyan-50 text-[var(--color-primary)]">
-                    <Building2 className="h-6 w-6" />
+            <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2">
+              <span className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                {sucursal.telefono || 'Sin teléfono'}
+              </span>
+
+              <span className="flex items-center gap-2 truncate">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span className="truncate">
+                  {sucursal.email || 'Sin email'}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.article>
+    );
+  };
+
+  const renderSortButton = (key, label) => (
+    <button
+      type="button"
+      onClick={() => handleSort(key)}
+      className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.13em] text-slate-500 transition hover:text-slate-950"
+    >
+      {label}
+      <ChevronsUpDown
+        className={`h-3.5 w-3.5 ${
+          sortBy === key ? 'text-[var(--color-primary)]' : 'text-slate-300'
+        }`}
+      />
+    </button>
+  );
+
+  return (
+    <main className="min-h-screen bg-[#eef6fb] text-[var(--color-text)] cuerpo">
+      <section className="relative overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,.20),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(90,151,208,.16),transparent_32%)]" />
+
+        <div className="absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(217,226,232,.70)_1px,transparent_1px),linear-gradient(90deg,rgba(217,226,232,.70)_1px,transparent_1px)] [background-size:54px_54px]" />
+
+        <div className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 bottom-20 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
+
+        <div className="relative z-10 mx-auto ">
+          <header className="mb-5 overflow-hidden rounded-[34px] border border-white bg-white/85 shadow-[0_22px_70px_rgba(15,23,42,.08)] backdrop-blur-xl">
+            <div className="relative p-5 sm:p-6 lg:p-7">
+              <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(25,211,223,.16),transparent_42%)]" />
+
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard')}
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--color-border)] bg-white text-slate-700 shadow-sm transition hover:-translate-x-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                    aria-label="Volver al dashboard"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-[var(--color-primary)]">
+                      <Building2 className="h-3.5 w-3.5" />
+                      Core administrativo
+                    </div>
+
+                    <h1 className="titulo uppercase mt-3 text-4xl leading-none tracking-[-0.055em] text-slate-950 sm:text-5xl lg:text-6xl">
+                      Sucursales
+                    </h1>
+
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-soft)]">
+                      Gestioná bases operativas, ubicación, contacto, estado y
+                      usuarios asignados desde una vista más clara, rápida y
+                      cómoda para administración.
+                    </p>
                   </div>
+                </div>
 
-                  <h3 className="titulo mt-4 text-3xl leading-none text-slate-950">
-                    No hay sucursales
-                  </h3>
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Creá la primera base operativa para comenzar a administrar
-                    VALMAT.
-                  </p>
+                <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
+                  <button
+                    type="button"
+                    onClick={() => fetchSucursales(q)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                    />
+                    Actualizar
+                  </button>
 
                   <button
                     type="button"
                     onClick={openCreate}
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white transition hover:bg-[var(--color-secondary)]"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.28)] transition hover:-translate-y-0.5 hover:bg-[var(--color-secondary)]"
                   >
                     <Plus className="h-5 w-5" />
                     Nueva sucursal
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {sucursales.map((sucursal) => (
-                  <article
-                    key={sucursal.id}
-                    className="group overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-cyan-200 hover:shadow-xl hover:shadow-cyan-100/50"
-                  >
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex min-w-0 gap-4">
-                          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-cyan-50 text-[var(--color-primary)]">
-                            <Building2 className="h-6 w-6" />
-                          </div>
+            </div>
+          </header>
 
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-lg font-black tracking-[-0.03em] text-slate-950">
-                                {sucursal.nombre}
-                              </h3>
+          <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {statCards.map((stat, index) => {
+              const Icon = stat.icon;
 
-                              <span
-                                className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${
-                                  sucursal.estado === 'ACTIVA'
-                                    ? 'bg-emerald-50 text-emerald-700'
-                                    : 'bg-slate-100 text-slate-500'
-                                }`}
-                              >
-                                {sucursal.estado}
-                              </span>
-                            </div>
+              return (
+                <motion.article
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: index * 0.05 }}
+                  className="group overflow-hidden rounded-[28px] border border-white bg-white/90 p-5 shadow-[0_16px_45px_rgba(15,23,42,.05)] backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,.08)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-slate-500">
+                        {stat.label}
+                      </p>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-500">
-                              {sucursal.descripcion ||
-                                'Sin descripción registrada.'}
-                            </p>
-                          </div>
-                        </div>
+                      <p
+                        className={`mt-3 text-4xl font-black tracking-[-0.06em] ${stat.className}`}
+                      >
+                        {stat.value}
+                      </p>
 
-                        <div className="flex shrink-0 items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(sucursal)}
-                            className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                            aria-label="Editar sucursal"
-                          >
-                            <Pencil className="h-4.5 w-4.5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(sucursal)}
-                            className="grid h-10 w-10 place-items-center rounded-2xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100 hover:text-red-700"
-                            aria-label="Eliminar sucursal"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                            Ubicación
-                          </p>
-
-                          <p className="mt-1 text-sm font-bold text-slate-900">
-                            {sucursal.localidad || 'Sin localidad'}
-                          </p>
-
-                          <p className="text-xs text-slate-500">
-                            {sucursal.provincia || 'Sin provincia'}
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => openUsuarios(sucursal)}
-                          className="rounded-2xl bg-slate-50 px-4 py-3 text-left transition hover:bg-cyan-50 hover:ring-2 hover:ring-cyan-100"
-                        >
-                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
-                            Usuarios
-                          </p>
-
-                          <div className="mt-1 flex items-center gap-2 text-sm font-bold text-slate-900">
-                            <Users className="h-4 w-4 text-[var(--color-primary)]" />
-                            {getUsersCount(sucursal)} asignados
-                          </div>
-
-                          <p className="mt-1 text-xs font-semibold text-[var(--color-primary)]">
-                            Ver usuarios
-                          </p>
-                        </button>
-                      </div>
-
-                      <div className="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-3">
-                        <div className="flex gap-2 text-sm font-semibold text-slate-600">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                          <span>
-                            {sucursal.direccion || 'Sin dirección registrada'}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
-                          <span className="flex items-center gap-2">
-                            <Phone className="h-3.5 w-3.5 text-slate-400" />
-                            {sucursal.telefono || 'Sin teléfono'}
-                          </span>
-
-                          <span className="flex items-center gap-2 truncate">
-                            <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                            <span className="truncate">
-                              {sucursal.email || 'Sin email'}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
+                      <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                        {stat.helper}
+                      </p>
                     </div>
-                  </article>
-                ))}
+
+                    <div
+                      className={`grid h-12 w-12 place-items-center rounded-2xl text-white shadow-sm ${stat.bg}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                </motion.article>
+              );
+            })}
+          </section>
+
+          <section className="rounded-[34px] border border-white bg-white/86 p-4 shadow-[0_22px_70px_rgba(15,23,42,.07)] backdrop-blur-xl sm:p-5">
+            <div className="mb-5 rounded-[28px] border border-slate-100 bg-white p-3 shadow-sm">
+              <div className="grid gap-3 xl:grid-cols-[1fr_auto_auto]">
+                <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition focus-within:border-[var(--color-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(25,211,223,.10)]">
+                  <Search className="h-5 w-5 shrink-0 text-[var(--color-secondary)]" />
+
+                  <input
+                    value={q}
+                    onChange={(event) => setQ(event.target.value)}
+                    placeholder="Buscar por nombre, localidad, provincia, teléfono o email"
+                    className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => setQ('')}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-slate-400 transition hover:text-slate-800"
+                      aria-label="Limpiar búsqueda"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { value: '', label: 'Todas' },
+                    { value: 'ACTIVA', label: 'Activas' },
+                    { value: 'INACTIVA', label: 'Inactivas' }
+                  ].map((item) => {
+                    const active = estado === item.value;
+
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setEstado(item.value)}
+                        className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black transition ${
+                          active
+                            ? 'bg-slate-950 text-white shadow-[0_14px_30px_rgba(15,23,42,.18)]'
+                            : 'border border-slate-200 bg-white text-slate-600 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
+                        }`}
+                      >
+                        <Filter className="h-4 w-4" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 p-1 lg:flex">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-black transition ${
+                        viewMode === 'table'
+                          ? 'bg-white text-slate-950 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <Table2 className="h-4 w-4" />
+                      Tabla
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('cards')}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-black transition ${
+                        viewMode === 'cards'
+                          ? 'bg-white text-slate-950 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                      Cards
+                    </button>
+                  </div>
+
+                  {filtrosActivos && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:border-red-200 hover:text-red-600"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Limpiar
+                    </button>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {loading ? (
+              <SucursalSkeleton />
+            ) : sucursalesOrdenadas.length === 0 ? (
+              <div className="grid min-h-[340px] place-items-center rounded-[30px] border border-dashed border-slate-200 bg-white/75 p-6 text-center">
+                <div>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-cyan-50 text-[var(--color-primary)] ring-8 ring-cyan-50/60">
+                    <Building2 className="h-7 w-7" />
+                  </div>
+
+                  <h3 className="titulo mt-5 text-3xl leading-none text-slate-950">
+                    No hay sucursales para mostrar
+                  </h3>
+
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                    Ajustá los filtros o creá una nueva base operativa para
+                    comenzar a administrar VALMAT.
+                  </p>
+
+                  <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+                    {filtrosActivos && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Limpiar filtros
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white transition hover:bg-[var(--color-secondary)]"
+                    >
+                      <Plus className="h-5 w-5" />
+                      Nueva sucursal
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="lg:hidden">
+                  <div className="grid gap-4">
+                    {sucursalesOrdenadas.map((sucursal, index) =>
+                      renderSucursalCard(sucursal, index)
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={
+                    viewMode === 'cards'
+                      ? 'hidden gap-4 lg:grid lg:grid-cols-2'
+                      : 'hidden'
+                  }
+                >
+                  {sucursalesOrdenadas.map((sucursal, index) =>
+                    renderSucursalCard(sucursal, index)
+                  )}
+                </div>
+
+                <div
+                  className={
+                    viewMode === 'table'
+                      ? 'hidden overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm lg:block'
+                      : 'hidden'
+                  }
+                >
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[1040px] w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50/90">
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('nombre', 'Sucursal')}
+                          </th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('localidad', 'Ubicación')}
+                          </th>
+                          <th className="px-5 py-4 text-left">Contacto</th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('usuarios', 'Usuarios')}
+                          </th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('estado', 'Estado')}
+                          </th>
+                          <th className="px-5 py-4 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {sucursalesOrdenadas.map((sucursal, index) => (
+                          <motion.tr
+                            key={sucursal.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                              duration: 0.25,
+                              delay: Math.min(index * 0.025, 0.16)
+                            }}
+                            className="border-b border-slate-100 transition hover:bg-cyan-50/45"
+                          >
+                            <td className="px-5 py-4">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-50 text-[var(--color-primary)] ring-1 ring-cyan-100">
+                                  <Building2 className="h-5 w-5" />
+                                </div>
+
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-black text-slate-950">
+                                    {sucursal.nombre}
+                                  </p>
+
+                                  <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-slate-500">
+                                    {sucursal.descripcion ||
+                                      'Sin descripción registrada.'}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <p className="text-sm font-bold text-slate-800">
+                                {sucursal.localidad || 'Sin localidad'}
+                              </p>
+
+                              <p className="text-xs font-semibold text-slate-500">
+                                {sucursal.provincia || 'Sin provincia'}
+                              </p>
+
+                              <p className="mt-1 line-clamp-1 text-xs text-slate-400">
+                                {sucursal.direccion ||
+                                  'Sin dirección registrada'}
+                              </p>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <div className="space-y-1 text-xs font-semibold text-slate-500">
+                                <span className="flex items-center gap-2">
+                                  <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                  {sucursal.telefono || 'Sin teléfono'}
+                                </span>
+
+                                <span className="flex max-w-[230px] items-center gap-2 truncate">
+                                  <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                  <span className="truncate">
+                                    {sucursal.email || 'Sin email'}
+                                  </span>
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <button
+                                type="button"
+                                onClick={() => openUsuarios(sucursal)}
+                                className="inline-flex items-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-sm font-black text-slate-900 transition hover:border-[var(--color-primary)] hover:bg-white hover:text-[var(--color-primary)]"
+                              >
+                                <Users className="h-4 w-4" />
+                                {getUsersCount(sucursal)}
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <SucursalStatusPill estado={sucursal.estado} />
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openUsuarios(sucursal)}
+                                  className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-cyan-200 hover:text-[var(--color-primary)]"
+                                  aria-label="Ver usuarios"
+                                >
+                                  <Eye className="h-[18px] w-[18px]" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(sucursal)}
+                                  className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                                  aria-label="Editar sucursal"
+                                >
+                                  <Pencil className="h-[18px] w-[18px]" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(sucursal)}
+                                  className="grid h-10 w-10 place-items-center rounded-2xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100 hover:text-red-700"
+                                  aria-label="Eliminar sucursal"
+                                >
+                                  <Trash2 className="h-[18px] w-[18px]" />
+                                </button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
           </section>
         </div>
@@ -636,86 +1126,124 @@ export default function SucursalesAdmin() {
             <button
               type="button"
               onClick={closeUsuarios}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"
               aria-label="Cerrar usuarios"
             />
 
             <motion.section
-              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              initial={{ opacity: 0, y: 22, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-              className="relative max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#08111f]/95 text-white shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-xl"
+              className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-[30px] border border-white/10 bg-[#08111f]/96 text-white shadow-[0_30px_100px_rgba(0,0,0,.48)] backdrop-blur-xl"
             >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-[0.14]"
-                style={{
-                  backgroundImage:
-                    'linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px)',
-                  backgroundSize: '36px 36px'
-                }}
-              />
+              
+
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-20 left-0 h-56 w-56 rounded-full bg-sky-400/10 blur-3xl" />
 
               <div className="relative z-10 border-b border-white/10 p-5 sm:p-6">
                 <button
                   type="button"
                   onClick={closeUsuarios}
-                  className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10"
+                  className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5 transition hover:bg-white/10"
                   aria-label="Cerrar"
                 >
                   <X className="h-5 w-5 text-gray-200" />
                 </button>
 
-                <div className="flex items-center gap-3 pr-10">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200">
-                    <Users className="h-6 w-6" />
+                <div className="flex flex-col gap-4 pr-10 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-13 w-13 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-200/15">
+                      <Users className="h-6 w-6" />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
+                        Usuarios asignados
+                      </p>
+
+                      <h3 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
+                        {selectedSucursal?.nombre || 'Sucursal'}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-gray-400">
+                        {selectedUsers.length} usuarios vinculados a esta
+                        sucursal.
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
-                      Usuarios asignados
-                    </p>
+                  <SucursalStatusPill estado={selectedSucursal?.estado} />
+                </div>
 
-                    <h3 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
-                      {selectedSucursal?.nombre || 'Sucursal'}
-                    </h3>
-                  </div>
+                <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 transition focus-within:border-cyan-200/50 focus-within:bg-white/[0.08]">
+                  <Search className="h-5 w-5 shrink-0 text-cyan-100/70" />
+
+                  <input
+                    value={usersQ}
+                    onChange={(event) => setUsersQ(event.target.value)}
+                    placeholder="Buscar usuario por nombre, email, teléfono, rol o estado"
+                    className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-500"
+                  />
+
+                  {usersQ && (
+                    <button
+                      type="button"
+                      onClick={() => setUsersQ('')}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white"
+                      aria-label="Limpiar búsqueda de usuarios"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="relative z-10 max-h-[calc(88vh-112px)] overflow-y-auto p-5 sm:p-6">
+              <div className="relative z-10 max-h-[calc(90vh-190px)] overflow-y-auto p-5 sm:p-6">
                 {usersLoading ? (
-                  <div className="grid min-h-[220px] place-items-center">
+                  <div className="grid min-h-[240px] place-items-center">
                     <div className="flex flex-col items-center gap-4">
                       <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-cyan-300" />
-                      <p className="text-sm text-gray-300">
+                      <p className="text-sm font-semibold text-gray-300">
                         Cargando usuarios...
                       </p>
                     </div>
                   </div>
-                ) : selectedUsers.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
-                    <p className="text-sm font-semibold text-gray-200">
-                      Esta sucursal no tiene usuarios asignados.
+                ) : selectedUsersFiltered.length === 0 ? (
+                  <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-6 text-center">
+                    <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/5 text-cyan-100">
+                      <Users className="h-6 w-6" />
+                    </div>
+
+                    <p className="mt-4 text-sm font-semibold text-gray-200">
+                      {selectedUsers.length === 0
+                        ? 'Esta sucursal no tiene usuarios asignados.'
+                        : 'No se encontraron usuarios con ese criterio.'}
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {selectedUsers.map((usuario) => {
+                    {selectedUsersFiltered.map((usuario, index) => {
                       const pivot = getUsuarioSucursalData(
                         usuario,
                         selectedSucursal?.id
                       );
 
                       return (
-                        <article
+                        <motion.article
                           key={usuario.id}
-                          className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 transition hover:bg-white/[0.08]"
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: 0.28,
+                            delay: Math.min(index * 0.03, 0.18)
+                          }}
+                          className="rounded-3xl border border-white/10 bg-white/[0.055] p-4 transition hover:border-cyan-200/20 hover:bg-white/[0.08]"
                         >
                           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex min-w-0 gap-3">
-                              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-sm font-black text-cyan-100">
+                              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-sm font-black text-cyan-100 ring-1 ring-white/10">
                                 {getInitials(usuario)}
                               </div>
 
@@ -736,23 +1264,23 @@ export default function SucursalesAdmin() {
                             </div>
 
                             <div className="flex flex-wrap gap-2 sm:justify-end">
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100 ring-1 ring-cyan-200/10">
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 {formatRole(usuario.rol_global)}
                               </span>
 
                               <span
-                                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${
                                   usuario.estado === 'ACTIVO'
-                                    ? 'bg-emerald-400/10 text-emerald-200'
-                                    : 'bg-white/10 text-gray-300'
+                                    ? 'bg-emerald-400/10 text-emerald-200 ring-emerald-300/10'
+                                    : 'bg-white/10 text-gray-300 ring-white/10'
                                 }`}
                               >
                                 {usuario.estado || 'SIN_ESTADO'}
                               </span>
 
                               {pivot?.es_principal && (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100 ring-1 ring-amber-200/10">
                                   <Crown className="h-3.5 w-3.5" />
                                   Principal
                                 </span>
@@ -760,16 +1288,30 @@ export default function SucursalesAdmin() {
                             </div>
                           </div>
 
-                          <div className="mt-4 rounded-xl border border-white/10 bg-black/10 px-3 py-2">
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-                              Rol en sucursal
-                            </p>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-2xl border border-white/10 bg-black/10 px-3 py-2">
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+                                Rol en sucursal
+                              </p>
 
-                            <p className="mt-1 text-sm font-bold text-gray-100">
-                              {formatRole(pivot?.rol_sucursal)}
-                            </p>
+                              <p className="mt-1 text-sm font-bold text-gray-100">
+                                {formatRole(pivot?.rol_sucursal)}
+                              </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-black/10 px-3 py-2">
+                              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+                                Relación
+                              </p>
+
+                              <p className="mt-1 text-sm font-bold text-gray-100">
+                                {pivot?.es_principal
+                                  ? 'Usuario principal'
+                                  : 'Usuario asignado'}
+                              </p>
+                            </div>
                           </div>
-                        </article>
+                        </motion.article>
                       );
                     })}
                   </div>

@@ -230,27 +230,6 @@ export default function Dashboard() {
     ultimoLogin: usuarioAuth?.ultimo_login || null
   };
 
-  const metrics = [
-    {
-      title: 'Solicitudes web',
-      value: 'Pendiente',
-      detail: 'Próximo módulo operativo',
-      tone: 'from-cyan-50 to-white'
-    },
-    {
-      title: 'Órdenes de servicio',
-      value: 'Planificado',
-      detail: 'Control de ejecución técnica',
-      tone: 'from-blue-50 to-white'
-    },
-    {
-      title: 'Sucursales asignadas',
-      value: sucursales.length,
-      detail: activeBranch?.nombre || 'Sin sucursal activa',
-      tone: 'from-slate-50 to-white'
-    }
-  ];
-
   const modules = [
     {
       title: 'Usuarios',
@@ -530,23 +509,6 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-          </section>
-
-          <section className="mt-5 grid gap-4 md:grid-cols-3">
-            {metrics.map((metric) => (
-              <article
-                key={metric.title}
-                className={`rounded-[28px] border border-white bg-gradient-to-br ${metric.tone} p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/70`}
-              >
-                <p className="text-sm font-semibold text-slate-500">
-                  {metric.title}
-                </p>
-                <p className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">
-                  {metric.value}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">{metric.detail}</p>
-              </article>
-            ))}
           </section>
 
           <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_370px]">

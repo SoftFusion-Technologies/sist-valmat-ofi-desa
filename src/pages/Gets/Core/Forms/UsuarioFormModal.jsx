@@ -299,17 +299,7 @@ export default function UsuarioFormModal({ open, onClose, onSubmit, initial }) {
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
             onClick={!saving ? onClose : undefined}
           />
-
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-[0.16]"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px)',
-              backgroundSize: '36px 36px'
-            }}
-          />
-
+        
           <div
             aria-hidden
             className="pointer-events-none absolute -top-24 -left-20 size-[22rem] rounded-full blur-3xl opacity-45 sm:size-[28rem] bg-[conic-gradient(from_180deg_at_50%_50%,rgba(59,130,246,0.14),rgba(6,182,212,0.12),rgba(99,102,241,0.12),transparent,rgba(6,182,212,0.12))]"

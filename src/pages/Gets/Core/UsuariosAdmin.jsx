@@ -6,16 +6,25 @@ import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import {
   ArrowLeft,
+  Ban,
+  Building2,
+  CheckCircle2,
+  ChevronsUpDown,
   Crown,
+  Eye,
+  Filter,
   KeyRound,
+  LayoutGrid,
   Mail,
   MapPin,
   Pencil,
   Phone,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
+  Table2,
   Trash2,
   User,
   Users,
@@ -35,8 +44,11 @@ const ROLES_GLOBALES = [
   'ENCARGADO',
   'OPERARIO'
 ];
+
 const ESTADOS_USUARIO = ['ACTIVO', 'INACTIVO', 'BLOQUEADO'];
+
 const ROLES_SUCURSAL = ['ADMIN_SUCURSAL', 'ENCARGADO', 'OPERARIO', 'COMERCIAL'];
+
 const ESTADOS_ASIGNACION = ['ACTIVO', 'INACTIVO'];
 
 const formatRole = (role) => {
@@ -117,6 +129,121 @@ const showSuccess = async (message) => {
   });
 };
 
+// Benjamin Orellana - 25/04/2026 - Se centralizan estilos visuales de estados para una lectura más rápida en tabla, cards y modales.
+const ESTADO_META = {
+  ACTIVO: {
+    label: 'Activo',
+    icon: CheckCircle2,
+    dot: 'bg-emerald-500',
+    pill: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+    card: 'from-emerald-50/90 to-white'
+  },
+  INACTIVO: {
+    label: 'Inactivo',
+    icon: Ban,
+    dot: 'bg-slate-400',
+    pill: 'bg-slate-100 text-slate-600 ring-slate-200',
+    card: 'from-slate-50/95 to-white'
+  },
+  BLOQUEADO: {
+    label: 'Bloqueado',
+    icon: Ban,
+    dot: 'bg-red-500',
+    pill: 'bg-red-50 text-red-600 ring-red-100',
+    card: 'from-red-50/80 to-white'
+  }
+};
+
+const getEstadoMeta = (estado) => {
+  return (
+    ESTADO_META[estado] || {
+      label: estado || 'Sin estado',
+      icon: User,
+      dot: 'bg-slate-400',
+      pill: 'bg-slate-100 text-slate-600 ring-slate-200',
+      card: 'from-slate-50/95 to-white'
+    }
+  );
+};
+
+const getRoleAccent = (role) => {
+  if (role === 'SUPER_ADMIN') {
+    return 'bg-slate-950 text-white ring-slate-900';
+  }
+
+  if (role === 'ADMIN') {
+    return 'bg-cyan-50 text-cyan-700 ring-cyan-100';
+  }
+
+  if (role === 'ENCARGADO') {
+    return 'bg-indigo-50 text-indigo-700 ring-indigo-100';
+  }
+
+  if (role === 'COMERCIAL') {
+    return 'bg-sky-50 text-sky-700 ring-sky-100';
+  }
+
+  return 'bg-slate-100 text-slate-600 ring-slate-200';
+};
+
+const sortText = (value) => String(value || '').toLowerCase();
+
+const EstadoPill = ({ estado }) => {
+  const meta = getEstadoMeta(estado);
+  const Icon = meta.icon;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] ring-1 ${meta.pill}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+      <Icon className="h-3.5 w-3.5" />
+      {meta.label}
+    </span>
+  );
+};
+
+const RolePill = ({ role }) => {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black ring-1 ${getRoleAccent(
+        role
+      )}`}
+    >
+      <ShieldCheck className="h-3.5 w-3.5" />
+      {formatRole(role)}
+    </span>
+  );
+};
+
+const UsuariosSkeleton = () => {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {[1, 2, 3, 4].map((item) => (
+        <article
+          key={item}
+          className="overflow-hidden rounded-[30px] border border-white bg-white/80 p-5 shadow-sm"
+        >
+          <div className="flex gap-4">
+            <div className="h-14 w-14 animate-pulse rounded-2xl bg-slate-100" />
+
+            <div className="flex-1">
+              <div className="h-4 w-2/3 animate-pulse rounded-full bg-slate-100" />
+              <div className="mt-3 h-3 w-full animate-pulse rounded-full bg-slate-100" />
+              <div className="mt-2 h-3 w-4/5 animate-pulse rounded-full bg-slate-100" />
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+            <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+};
+
 export default function UsuariosAdmin() {
   const navigate = useNavigate();
   const { authToken } = useAuth();
@@ -126,9 +253,14 @@ export default function UsuariosAdmin() {
   const [loading, setLoading] = useState(true);
 
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [estado, setEstado] = useState('');
   const [rolGlobal, setRolGlobal] = useState('');
   const [sucursalId, setSucursalId] = useState('');
+
+  const [viewMode, setViewMode] = useState('table');
+  const [sortBy, setSortBy] = useState('nombre');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
@@ -157,6 +289,15 @@ export default function UsuariosAdmin() {
     return baseHeaders;
   }, [authToken]);
 
+  // Benjamin Orellana - 25/04/2026 - Se agrega debounce para evitar recargar la tabla en cada tecla escrita.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedQ(q.trim());
+    }, 380);
+
+    return () => clearTimeout(timeout);
+  }, [q]);
+
   const stats = useMemo(() => {
     const total = usuarios.length;
     const activos = usuarios.filter((item) => item.estado === 'ACTIVO').length;
@@ -174,6 +315,44 @@ export default function UsuariosAdmin() {
       admins
     };
   }, [usuarios]);
+
+  const filtrosActivos = useMemo(() => {
+    return Boolean(q.trim() || estado || rolGlobal || sucursalId);
+  }, [estado, q, rolGlobal, sucursalId]);
+
+  const usuariosOrdenados = useMemo(() => {
+    const ordered = [...usuarios].sort((a, b) => {
+      let left = '';
+      let right = '';
+
+      if (sortBy === 'estado') {
+        left = sortText(a.estado);
+        right = sortText(b.estado);
+      } else if (sortBy === 'rol') {
+        left = sortText(a.rol_global);
+        right = sortText(b.rol_global);
+      } else if (sortBy === 'sucursales') {
+        left = Array.isArray(a.sucursales) ? a.sucursales.length : 0;
+        right = Array.isArray(b.sucursales) ? b.sucursales.length : 0;
+      } else if (sortBy === 'login') {
+        left = a.ultimo_login ? new Date(a.ultimo_login).getTime() : 0;
+        right = b.ultimo_login ? new Date(b.ultimo_login).getTime() : 0;
+      } else {
+        left = sortText(`${a.nombre || ''} ${a.apellido || ''}`);
+        right = sortText(`${b.nombre || ''} ${b.apellido || ''}`);
+      }
+
+      if (typeof left === 'number' && typeof right === 'number') {
+        return sortDirection === 'asc' ? left - right : right - left;
+      }
+
+      return sortDirection === 'asc'
+        ? String(left).localeCompare(String(right))
+        : String(right).localeCompare(String(left));
+    });
+
+    return ordered;
+  }, [sortBy, sortDirection, usuarios]);
 
   const request = useCallback(
     async (endpoint, options = {}) => {
@@ -216,42 +395,45 @@ export default function UsuariosAdmin() {
     }
   }, [request]);
 
-  const fetchUsuarios = useCallback(async () => {
-    setLoading(true);
+  const fetchUsuarios = useCallback(
+    async (searchOverride) => {
+      setLoading(true);
 
-    try {
-      const params = new URLSearchParams();
+      try {
+        const params = new URLSearchParams();
+        const searchValue =
+          typeof searchOverride === 'string'
+            ? searchOverride.trim()
+            : debouncedQ;
 
-      if (q.trim()) params.set('q', q.trim());
-      if (estado) params.set('estado', estado);
-      if (rolGlobal) params.set('rol_global', rolGlobal);
-      if (sucursalId) params.set('sucursal_id', sucursalId);
+        if (searchValue) params.set('q', searchValue);
+        if (estado) params.set('estado', estado);
+        if (rolGlobal) params.set('rol_global', rolGlobal);
+        if (sucursalId) params.set('sucursal_id', sucursalId);
 
-      const queryString = params.toString();
-      const endpoint = queryString ? `/usuarios?${queryString}` : '/usuarios';
+        const queryString = params.toString();
+        const endpoint = queryString ? `/usuarios?${queryString}` : '/usuarios';
 
-      const data = await request(endpoint, {
-        method: 'GET'
-      });
+        const data = await request(endpoint, {
+          method: 'GET'
+        });
 
-      setUsuarios(Array.isArray(data?.usuarios) ? data.usuarios : []);
-    } catch (error) {
-      await showError(getErrorMessage(error, 'Error al obtener usuarios.'));
-    } finally {
-      setLoading(false);
-    }
-  }, [estado, q, request, rolGlobal, sucursalId]);
+        setUsuarios(Array.isArray(data?.usuarios) ? data.usuarios : []);
+      } catch (error) {
+        await showError(getErrorMessage(error, 'Error al obtener usuarios.'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [debouncedQ, estado, request, rolGlobal, sucursalId]
+  );
 
   useEffect(() => {
     fetchSucursales();
   }, [fetchSucursales]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      fetchUsuarios();
-    }, 350);
-
-    return () => clearTimeout(timeout);
+    fetchUsuarios();
   }, [fetchUsuarios]);
 
   const openCreate = () => {
@@ -280,7 +462,7 @@ export default function UsuariosAdmin() {
       body: JSON.stringify(payload)
     });
 
-    await fetchUsuarios();
+    await fetchUsuarios(q);
   };
 
   const openPassword = (usuario) => {
@@ -299,7 +481,7 @@ export default function UsuariosAdmin() {
       body: JSON.stringify({ password })
     });
 
-    await fetchUsuarios();
+    await fetchUsuarios(q);
   };
 
   const handleDelete = async (usuario) => {
@@ -329,7 +511,7 @@ export default function UsuariosAdmin() {
         method: 'DELETE'
       });
 
-      await fetchUsuarios();
+      await fetchUsuarios(q);
       await showSuccess('Usuario eliminado correctamente.');
     } catch (error) {
       await showError(
@@ -488,331 +670,664 @@ export default function UsuariosAdmin() {
     }
   };
 
-  return (
-    <main className="min-h-screen bg-[#eef6fb] text-[var(--color-text)] cuerpo">
-      <section className="relative overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(90,151,208,.12),transparent_32%)]" />
-        <div className="absolute inset-0 opacity-[0.34] [background-image:linear-gradient(rgba(217,226,232,.70)_1px,transparent_1px),linear-gradient(90deg,rgba(217,226,232,.70)_1px,transparent_1px)] [background-size:54px_54px]" />
+  const resetFilters = () => {
+    setQ('');
+    setDebouncedQ('');
+    setEstado('');
+    setRolGlobal('');
+    setSucursalId('');
+  };
 
-        <div className="relative z-10 mx-auto max-w-7xl">
-          <header className="mb-5 flex flex-col gap-4 rounded-[32px] border border-white bg-white/85 p-5 shadow-sm backdrop-blur-xl sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
+  const handleSort = (key) => {
+    if (sortBy === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(key);
+    setSortDirection('asc');
+  };
+
+  const renderSortButton = (key, label) => (
+    <button
+      type="button"
+      onClick={() => handleSort(key)}
+      className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.13em] text-slate-500 transition hover:text-slate-950"
+    >
+      {label}
+      <ChevronsUpDown
+        className={`h-3.5 w-3.5 ${
+          sortBy === key ? 'text-[var(--color-primary)]' : 'text-slate-300'
+        }`}
+      />
+    </button>
+  );
+
+  const statCards = [
+    {
+      label: 'Total usuarios',
+      value: stats.total,
+      helper: 'Resultado actual',
+      icon: Users,
+      className: 'text-slate-950',
+      bg: 'bg-slate-950'
+    },
+    {
+      label: 'Activos',
+      value: stats.activos,
+      helper: 'Con acceso habilitado',
+      icon: CheckCircle2,
+      className: 'text-emerald-600',
+      bg: 'bg-emerald-500'
+    },
+    {
+      label: 'Administradores',
+      value: stats.admins,
+      helper: 'Roles críticos',
+      icon: ShieldCheck,
+      className: 'text-[var(--color-primary)]',
+      bg: 'bg-[var(--color-primary)]'
+    },
+    {
+      label: 'Bloqueados',
+      value: stats.bloqueados,
+      helper: 'Acceso restringido',
+      icon: Ban,
+      className: 'text-red-500',
+      bg: 'bg-red-500'
+    }
+  ];
+
+  const renderUsuarioCard = (usuario, index = 0) => {
+    const estadoMeta = getEstadoMeta(usuario.estado);
+    const sucursalesCount = Array.isArray(usuario.sucursales)
+      ? usuario.sucursales.length
+      : 0;
+
+    return (
+      <motion.article
+        key={usuario.id}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.38, delay: Math.min(index * 0.035, 0.18) }}
+        className="group relative overflow-hidden rounded-[30px] border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,.06)] transition duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-[0_24px_70px_rgba(25,211,223,.16)]"
+      >
+        <div
+          className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-br ${estadoMeta.card}`}
+        />
+
+        <div className="relative p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 gap-4">
+              <div className="relative grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-slate-950 text-sm font-black text-white shadow-sm ring-1 ring-slate-900/10">
+                {getInitials(usuario)}
+                <span
+                  className={`absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-white ${estadoMeta.dot}`}
+                />
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-lg font-black tracking-[-0.03em] text-slate-950">
+                    {usuario.nombre} {usuario.apellido || ''}
+                  </h3>
+
+                  <EstadoPill estado={usuario.estado} />
+                </div>
+
+                <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                  ID #{usuario.id}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--color-border)] bg-white text-slate-700 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                aria-label="Volver al dashboard"
+                onClick={() => openEdit(usuario)}
+                className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                aria-label="Editar usuario"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <Pencil className="h-[18px] w-[18px]" />
               </button>
 
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--color-primary)]">
-                  Core administrativo
-                </p>
+              <button
+                type="button"
+                onClick={() => openPassword(usuario)}
+                className="grid h-10 w-10 place-items-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-600 shadow-sm transition hover:bg-amber-100"
+                aria-label="Cambiar contraseña"
+              >
+                <KeyRound className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+          </div>
 
-                <h1 className="titulo mt-1 text-4xl leading-none tracking-[-0.045em] text-slate-950 sm:text-5xl">
-                  Usuarios
-                </h1>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-white/90 px-4 py-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                Rol global
+              </p>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-soft)]">
-                  Administrá accesos, roles globales, estados, sucursales
-                  asignadas y contraseñas del sistema.
-                </p>
+              <div className="mt-2">
+                <RolePill role={usuario.rol_global} />
               </div>
             </div>
 
             <button
               type="button"
-              onClick={openCreate}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.25)] transition hover:-translate-y-0.5 hover:bg-[var(--color-secondary)]"
+              onClick={() => openAsignaciones(usuario)}
+              className="rounded-2xl border border-cyan-100 bg-cyan-50/60 px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-cyan-50 hover:ring-2 hover:ring-cyan-100"
             >
-              <Plus className="h-5 w-5" />
-              Nuevo usuario
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                Sucursales
+              </p>
+
+              <div className="mt-1 flex items-center gap-2 text-sm font-black text-slate-900">
+                <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
+                {sucursalesCount} asignadas
+              </div>
+
+              <p className="mt-1 inline-flex items-center gap-1 text-xs font-black text-[var(--color-primary)]">
+                Gestionar accesos
+                <Eye className="h-3.5 w-3.5" />
+              </p>
             </button>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+            <div className="grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2">
+              <span className="flex min-w-0 items-center gap-2">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span className="truncate">{usuario.email || 'Sin email'}</span>
+              </span>
+
+              <span className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-slate-400" />
+                {usuario.telefono || 'Sin teléfono'}
+              </span>
+            </div>
+
+            <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                Último login
+              </p>
+
+              <p className="mt-1 text-sm font-black text-slate-800">
+                {formatDateTime(usuario.ultimo_login)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => openAsignaciones(usuario)}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            >
+              <MapPin className="h-4 w-4" />
+              Sucursales
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDelete(usuario)}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </motion.article>
+    );
+  };
+
+  return (
+    <main className="min-h-screen bg-[#eef6fb] text-[var(--color-text)] cuerpo">
+      <section className="relative overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,.20),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(90,151,208,.16),transparent_32%)]" />
+        <div className="absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(217,226,232,.70)_1px,transparent_1px),linear-gradient(90deg,rgba(217,226,232,.70)_1px,transparent_1px)] [background-size:54px_54px]" />
+        <div className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 bottom-20 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
+
+        <div className="relative z-10 mx-auto">
+          <header className="mb-5 overflow-hidden rounded-[34px] border border-white bg-white/85 shadow-[0_22px_70px_rgba(15,23,42,.08)] backdrop-blur-xl">
+            <div className="relative p-5 sm:p-6 lg:p-7">
+              <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(25,211,223,.16),transparent_42%)]" />
+
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard')}
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[var(--color-border)] bg-white text-slate-700 shadow-sm transition hover:-translate-x-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                    aria-label="Volver al dashboard"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-[var(--color-primary)]">
+                      <Users className="h-3.5 w-3.5" />
+                      Core administrativo
+                    </div>
+
+                    <h1 className="titulo uppercase mt-3 text-4xl leading-none tracking-[-0.055em] text-slate-950 sm:text-5xl lg:text-6xl">
+                      Usuarios
+                    </h1>
+
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-soft)]">
+                      Administrá accesos, roles globales, estados, sucursales
+                      asignadas y cambios de contraseña desde una vista más
+                      rápida, clara y segura.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
+                  <button
+                    type="button"
+                    onClick={() => fetchUsuarios(q)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                    />
+                    Actualizar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.28)] transition hover:-translate-y-0.5 hover:bg-[var(--color-secondary)]"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Nuevo usuario
+                  </button>
+                </div>
+              </div>
+            </div>
           </header>
 
           <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">
-                Total usuarios
-              </p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-slate-950">
-                {stats.total}
-              </p>
-            </article>
+            {statCards.map((stat, index) => {
+              const Icon = stat.icon;
 
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">Activos</p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-emerald-600">
-                {stats.activos}
-              </p>
-            </article>
+              return (
+                <motion.article
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: index * 0.05 }}
+                  className="group overflow-hidden rounded-[28px] border border-white bg-white/90 p-5 shadow-[0_16px_45px_rgba(15,23,42,.05)] backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,.08)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-slate-500">
+                        {stat.label}
+                      </p>
 
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">
-                Administradores
-              </p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-[var(--color-primary)]">
-                {stats.admins}
-              </p>
-            </article>
+                      <p
+                        className={`mt-3 text-4xl font-black tracking-[-0.06em] ${stat.className}`}
+                      >
+                        {stat.value}
+                      </p>
 
-            <article className="rounded-[28px] border border-white bg-white/90 p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">Bloqueados</p>
-              <p className="mt-3 text-4xl font-black tracking-[-0.06em] text-red-500">
-                {stats.bloqueados}
-              </p>
-            </article>
+                      <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                        {stat.helper}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`grid h-12 w-12 place-items-center rounded-2xl text-white shadow-sm ${stat.bg}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                </motion.article>
+              );
+            })}
           </section>
 
-          <section className="rounded-[32px] border border-white bg-white/86 p-4 shadow-sm backdrop-blur-xl sm:p-5">
-            <div className="mb-5 grid gap-3 xl:grid-cols-[1fr_180px_200px_220px_auto]">
-              <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition focus-within:border-[var(--color-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(25,211,223,.10)]">
-                <Search className="h-5 w-5 shrink-0 text-[var(--color-secondary)]" />
+          <section className="rounded-[34px] border border-white bg-white/86 p-4 shadow-[0_22px_70px_rgba(15,23,42,.07)] backdrop-blur-xl sm:p-5">
+            <div className="mb-5 rounded-[28px] border border-slate-100 bg-white p-3 shadow-sm">
+              <div className="grid gap-3 2xl:grid-cols-[1fr_auto_auto]">
+                <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition focus-within:border-[var(--color-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(25,211,223,.10)]">
+                  <Search className="h-5 w-5 shrink-0 text-[var(--color-secondary)]" />
 
-                <input
-                  value={q}
-                  onChange={(event) => setQ(event.target.value)}
-                  placeholder="Buscar por nombre, apellido, email o teléfono"
-                  className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                />
+                  <input
+                    value={q}
+                    onChange={(event) => setQ(event.target.value)}
+                    placeholder="Buscar por nombre, apellido, email o teléfono"
+                    className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => setQ('')}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-slate-400 transition hover:text-slate-800"
+                      aria-label="Limpiar búsqueda"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-3 2xl:flex 2xl:items-center">
+                  <select
+                    value={estado}
+                    onChange={(event) => setEstado(event.target.value)}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
+                  >
+                    <option value="">Todos los estados</option>
+                    {ESTADOS_USUARIO.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={rolGlobal}
+                    onChange={(event) => setRolGlobal(event.target.value)}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
+                  >
+                    <option value="">Todos los roles</option>
+                    {ROLES_GLOBALES.map((item) => (
+                      <option key={item} value={item}>
+                        {formatRole(item)}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={sucursalId}
+                    onChange={(event) => setSucursalId(event.target.value)}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
+                  >
+                    <option value="">Todas las sucursales</option>
+                    {sucursales.map((sucursal) => (
+                      <option key={sucursal.id} value={sucursal.id}>
+                        {sucursal.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 p-1 lg:flex">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-black transition ${
+                        viewMode === 'table'
+                          ? 'bg-white text-slate-950 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <Table2 className="h-4 w-4" />
+                      Tabla
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('cards')}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-black transition ${
+                        viewMode === 'cards'
+                          ? 'bg-white text-slate-950 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                      Cards
+                    </button>
+                  </div>
+
+                  {filtrosActivos && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:border-red-200 hover:text-red-600"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Limpiar
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => fetchUsuarios(q)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  >
+                    <Filter className="h-4 w-4" />
+                    Aplicar
+                  </button>
+                </div>
               </div>
-
-              <select
-                value={estado}
-                onChange={(event) => setEstado(event.target.value)}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
-              >
-                <option value="">Todos los estados</option>
-                {ESTADOS_USUARIO.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={rolGlobal}
-                onChange={(event) => setRolGlobal(event.target.value)}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
-              >
-                <option value="">Todos los roles</option>
-                {ROLES_GLOBALES.map((item) => (
-                  <option key={item} value={item}>
-                    {formatRole(item)}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={sucursalId}
-                onChange={(event) => setSucursalId(event.target.value)}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-[var(--color-primary)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(25,211,223,.10)]"
-              >
-                <option value="">Todas las sucursales</option>
-                {sucursales.map((sucursal) => (
-                  <option key={sucursal.id} value={sucursal.id}>
-                    {sucursal.nombre}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={fetchUsuarios}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-                />
-                Actualizar
-              </button>
             </div>
 
-            <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="min-w-[1040px] w-full border-collapse">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Usuario
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Contacto
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Rol
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Estado
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Sucursales
-                      </th>
-                      <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Último login
-                      </th>
-                      <th className="px-5 py-4 text-right text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
+            {loading ? (
+              <UsuariosSkeleton />
+            ) : usuariosOrdenados.length === 0 ? (
+              <div className="grid min-h-[340px] place-items-center rounded-[30px] border border-dashed border-slate-200 bg-white/75 p-6 text-center">
+                <div>
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-cyan-50 text-[var(--color-primary)] ring-8 ring-cyan-50/60">
+                    <Users className="h-7 w-7" />
+                  </div>
 
-                  <tbody className="divide-y divide-slate-100">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="px-5 py-16 text-center">
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="h-11 w-11 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)]" />
-                            <p className="text-sm font-semibold text-slate-500">
-                              Cargando usuarios...
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : usuarios.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-5 py-16 text-center">
-                          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-cyan-50 text-[var(--color-primary)]">
-                            <Users className="h-6 w-6" />
-                          </div>
+                  <h3 className="titulo mt-5 text-3xl leading-none text-slate-950">
+                    No hay usuarios para mostrar
+                  </h3>
 
-                          <h3 className="titulo mt-4 text-3xl leading-none text-slate-950">
-                            No hay usuarios
-                          </h3>
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                    Ajustá los filtros o creá un nuevo usuario para comenzar a
+                    administrar accesos en VALMAT.
+                  </p>
 
-                          <p className="mt-2 text-sm text-slate-500">
-                            Creá el primer usuario para administrar VALMAT.
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={openCreate}
-                            className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white transition hover:bg-[var(--color-secondary)]"
-                          >
-                            <Plus className="h-5 w-5" />
-                            Nuevo usuario
-                          </button>
-                        </td>
-                      </tr>
-                    ) : (
-                      usuarios.map((usuario) => (
-                        <tr
-                          key={usuario.id}
-                          className="transition hover:bg-cyan-50/35"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950 text-sm font-black text-white">
-                                {getInitials(usuario)}
-                              </div>
-
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-black text-slate-950">
-                                  {usuario.nombre} {usuario.apellido || ''}
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                  ID #{usuario.id}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="space-y-1 text-sm">
-                              <p className="flex items-center gap-2 text-slate-700">
-                                <Mail className="h-3.5 w-3.5 text-slate-400" />
-                                <span className="max-w-[210px] truncate">
-                                  {usuario.email || 'Sin email'}
-                                </span>
-                              </p>
-
-                              <p className="flex items-center gap-2 text-slate-500">
-                                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                                {usuario.telefono || 'Sin teléfono'}
-                              </p>
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-black text-cyan-700">
-                              <ShieldCheck className="h-3.5 w-3.5" />
-                              {formatRole(usuario.rol_global)}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span
-                              className={`rounded-full px-3 py-1.5 text-xs font-black ${
-                                usuario.estado === 'ACTIVO'
-                                  ? 'bg-emerald-50 text-emerald-700'
-                                  : usuario.estado === 'BLOQUEADO'
-                                    ? 'bg-red-50 text-red-600'
-                                    : 'bg-slate-100 text-slate-500'
-                              }`}
-                            >
-                              {usuario.estado}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <button
-                              type="button"
-                              onClick={() => openAsignaciones(usuario)}
-                              className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                            >
-                              <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
-                              {Array.isArray(usuario.sucursales)
-                                ? usuario.sucursales.length
-                                : 0}{' '}
-                              asignadas
-                            </button>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <p className="text-sm font-semibold text-slate-700">
-                              {formatDateTime(usuario.ultimo_login)}
-                            </p>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => openEdit(usuario)}
-                                className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                                title="Editar"
-                              >
-                                <Pencil className="h-4.5 w-4.5" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => openPassword(usuario)}
-                                className="grid h-10 w-10 place-items-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-600 transition hover:bg-amber-100"
-                                title="Cambiar contraseña"
-                              >
-                                <KeyRound className="h-4.5 w-4.5" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(usuario)}
-                                className="grid h-10 w-10 place-items-center rounded-2xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100 hover:text-red-700"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="h-4.5 w-4.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                  <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+                    {filtrosActivos && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Limpiar filtros
+                      </button>
                     )}
-                  </tbody>
-                </table>
+
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white transition hover:bg-[var(--color-secondary)]"
+                    >
+                      <Plus className="h-5 w-5" />
+                      Nuevo usuario
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="lg:hidden">
+                  <div className="grid gap-4">
+                    {usuariosOrdenados.map((usuario, index) =>
+                      renderUsuarioCard(usuario, index)
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={
+                    viewMode === 'cards'
+                      ? 'hidden gap-4 lg:grid lg:grid-cols-2'
+                      : 'hidden'
+                  }
+                >
+                  {usuariosOrdenados.map((usuario, index) =>
+                    renderUsuarioCard(usuario, index)
+                  )}
+                </div>
+
+                <div
+                  className={
+                    viewMode === 'table'
+                      ? 'hidden overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm lg:block'
+                      : 'hidden'
+                  }
+                >
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[1180px] w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50/90">
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('nombre', 'Usuario')}
+                          </th>
+                          <th className="px-5 py-4 text-left">Contacto</th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('rol', 'Rol')}
+                          </th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('estado', 'Estado')}
+                          </th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('sucursales', 'Sucursales')}
+                          </th>
+                          <th className="px-5 py-4 text-left">
+                            {renderSortButton('login', 'Último login')}
+                          </th>
+                          <th className="px-5 py-4 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {usuariosOrdenados.map((usuario, index) => {
+                          const sucursalesCount = Array.isArray(
+                            usuario.sucursales
+                          )
+                            ? usuario.sucursales.length
+                            : 0;
+
+                          return (
+                            <motion.tr
+                              key={usuario.id}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{
+                                duration: 0.25,
+                                delay: Math.min(index * 0.025, 0.16)
+                              }}
+                              className="border-b border-slate-100 transition hover:bg-cyan-50/45"
+                            >
+                              <td className="px-5 py-4">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950 text-sm font-black text-white ring-1 ring-slate-900/10">
+                                    {getInitials(usuario)}
+                                  </div>
+
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-black text-slate-950">
+                                      {usuario.nombre} {usuario.apellido || ''}
+                                    </p>
+
+                                    <p className="text-xs font-semibold text-slate-400">
+                                      ID #{usuario.id}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <div className="space-y-1 text-sm">
+                                  <p className="flex min-w-0 items-center gap-2 text-slate-700">
+                                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                    <span className="max-w-[230px] truncate">
+                                      {usuario.email || 'Sin email'}
+                                    </span>
+                                  </p>
+
+                                  <p className="flex items-center gap-2 text-slate-500">
+                                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                    {usuario.telefono || 'Sin teléfono'}
+                                  </p>
+                                </div>
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <RolePill role={usuario.rol_global} />
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <EstadoPill estado={usuario.estado} />
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <button
+                                  type="button"
+                                  onClick={() => openAsignaciones(usuario)}
+                                  className="inline-flex items-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-sm font-black text-slate-900 transition hover:border-[var(--color-primary)] hover:bg-white hover:text-[var(--color-primary)]"
+                                >
+                                  <MapPin className="h-4 w-4" />
+                                  {sucursalesCount}
+                                  <Eye className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <p className="text-sm font-bold text-slate-700">
+                                  {formatDateTime(usuario.ultimo_login)}
+                                </p>
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => openAsignaciones(usuario)}
+                                    className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-cyan-200 hover:text-[var(--color-primary)]"
+                                    title="Sucursales"
+                                  >
+                                    <MapPin className="h-[18px] w-[18px]" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openEdit(usuario)}
+                                    className="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                                    title="Editar"
+                                  >
+                                    <Pencil className="h-[18px] w-[18px]" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openPassword(usuario)}
+                                    className="grid h-10 w-10 place-items-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-600 transition hover:bg-amber-100"
+                                    title="Cambiar contraseña"
+                                  >
+                                    <KeyRound className="h-[18px] w-[18px]" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(usuario)}
+                                    className="grid h-10 w-10 place-items-center rounded-2xl border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100 hover:text-red-700"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="h-[18px] w-[18px]" />
+                                  </button>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         </div>
       </section>
@@ -844,20 +1359,20 @@ export default function UsuariosAdmin() {
             <button
               type="button"
               onClick={closeAsignaciones}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm"
               aria-label="Cerrar asignaciones"
             />
 
             <motion.section
-              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              initial={{ opacity: 0, y: 22, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-              className="relative max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-[#08111f]/95 text-white shadow-[0_30px_100px_rgba(0,0,0,.45)] backdrop-blur-xl"
+              className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[30px] border border-white/10 bg-[#08111f]/96 text-white shadow-[0_30px_100px_rgba(0,0,0,.48)] backdrop-blur-xl"
             >
               <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-[0.14]"
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-[0.16]"
                 style={{
                   backgroundImage:
                     'linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px)',
@@ -865,42 +1380,64 @@ export default function UsuariosAdmin() {
                 }}
               />
 
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-20 left-0 h-56 w-56 rounded-full bg-sky-400/10 blur-3xl" />
+
               <div className="relative z-10 border-b border-white/10 p-5 sm:p-6">
                 <button
                   type="button"
                   onClick={closeAsignaciones}
-                  className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10"
+                  className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5 transition hover:bg-white/10"
                   aria-label="Cerrar"
                 >
                   <X className="h-5 w-5 text-gray-200" />
                 </button>
 
-                <div className="flex items-center gap-3 pr-10">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200">
-                    <MapPin className="h-6 w-6" />
+                <div className="flex flex-col gap-4 pr-10 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-200/15">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
+                        Sucursales del usuario
+                      </p>
+
+                      <h3 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
+                        {asignacionesUsuario?.nombre}{' '}
+                        {asignacionesUsuario?.apellido || ''}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-gray-400">
+                        Gestioná acceso, rol, estado y sucursal principal.
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
-                      Sucursales del usuario
-                    </p>
-
-                    <h3 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
-                      {asignacionesUsuario?.nombre}{' '}
-                      {asignacionesUsuario?.apellido || ''}
-                    </h3>
-                  </div>
+                  <RolePill role={asignacionesUsuario?.rol_global} />
                 </div>
               </div>
 
-              <div className="relative z-10 max-h-[calc(88vh-112px)] overflow-y-auto p-5 sm:p-6">
+              <div className="relative z-10 max-h-[calc(90vh-120px)] overflow-y-auto p-5 sm:p-6">
                 <form
                   onSubmit={saveAsignacion}
-                  className="mb-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4"
+                  className="mb-5 rounded-[26px] border border-white/10 bg-white/[0.055] p-4 shadow-[0_18px_60px_rgba(0,0,0,.18)]"
                 >
+                  <div className="mb-4 flex flex-col gap-1">
+                    <p className="text-sm font-black text-white">
+                      Nueva asignación o edición rápida
+                    </p>
+
+                    <p className="text-xs leading-5 text-gray-400">
+                      Seleccioná una sucursal existente, definí el rol operativo
+                      y guardá los cambios.
+                    </p>
+                  </div>
+
                   <div className="grid gap-3 md:grid-cols-2">
                     <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-gray-200">
+                      <span className="mb-2 block text-sm font-bold text-gray-200">
                         Sucursal
                       </span>
 
@@ -908,7 +1445,7 @@ export default function UsuariosAdmin() {
                         name="sucursal_id"
                         value={asignacionForm.sucursal_id}
                         onChange={handleAsignacionChange}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-3.5 py-3 text-white outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-300/40"
                       >
                         <option value="" className="bg-slate-950">
                           Seleccionar sucursal
@@ -927,7 +1464,7 @@ export default function UsuariosAdmin() {
                     </label>
 
                     <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-gray-200">
+                      <span className="mb-2 block text-sm font-bold text-gray-200">
                         Rol en sucursal
                       </span>
 
@@ -935,7 +1472,7 @@ export default function UsuariosAdmin() {
                         name="rol_sucursal"
                         value={asignacionForm.rol_sucursal}
                         onChange={handleAsignacionChange}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-3.5 py-3 text-white outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-300/40"
                       >
                         {ROLES_SUCURSAL.map((role) => (
                           <option
@@ -950,7 +1487,7 @@ export default function UsuariosAdmin() {
                     </label>
 
                     <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-gray-200">
+                      <span className="mb-2 block text-sm font-bold text-gray-200">
                         Estado asignación
                       </span>
 
@@ -958,7 +1495,7 @@ export default function UsuariosAdmin() {
                         name="estado"
                         value={asignacionForm.estado}
                         onChange={handleAsignacionChange}
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-white focus:border-transparent focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-3.5 py-3 text-white outline-none transition focus:border-transparent focus:ring-2 focus:ring-cyan-300/40"
                       >
                         {ESTADOS_ASIGNACION.map((item) => (
                           <option
@@ -972,7 +1509,7 @@ export default function UsuariosAdmin() {
                       </select>
                     </label>
 
-                    <label className="flex cursor-pointer select-none items-end gap-3 pb-3">
+                    <label className="flex cursor-pointer select-none items-end gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">
                       <input
                         type="checkbox"
                         name="es_principal"
@@ -983,21 +1520,42 @@ export default function UsuariosAdmin() {
 
                       <span
                         className="relative inline-flex h-6 w-11 items-center rounded-full bg-white/10 transition-colors duration-200 peer-checked:bg-emerald-500/70"
-                        aria-hidden
+                        aria-hidden="true"
                       >
                         <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 peer-checked:translate-x-5" />
                       </span>
 
-                      <span className="text-sm text-gray-200">
-                        Sucursal principal
+                      <span>
+                        <span className="block text-sm font-bold text-gray-100">
+                          Sucursal principal
+                        </span>
+
+                        <span className="block text-xs text-gray-500">
+                          Marcar como acceso principal del usuario.
+                        </span>
                       </span>
                     </label>
                   </div>
 
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAsignacionForm({
+                          sucursal_id: '',
+                          rol_sucursal: 'OPERARIO',
+                          es_principal: false,
+                          estado: 'ACTIVO'
+                        })
+                      }
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black text-gray-200 transition hover:bg-white/10"
+                    >
+                      Limpiar formulario
+                    </button>
+
                     <button
                       type="submit"
-                      className="rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-4 py-2 font-semibold text-white transition hover:brightness-110"
+                      className="rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.18)] transition hover:-translate-y-0.5 hover:brightness-110"
                     >
                       Guardar asignación
                     </button>
@@ -1006,61 +1564,77 @@ export default function UsuariosAdmin() {
 
                 {!Array.isArray(asignacionesUsuario?.sucursales) ||
                 asignacionesUsuario.sucursales.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
-                    <p className="text-sm font-semibold text-gray-200">
+                  <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-6 text-center">
+                    <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/5 text-cyan-100">
+                      <Building2 className="h-6 w-6" />
+                    </div>
+
+                    <p className="mt-4 text-sm font-semibold text-gray-200">
                       Este usuario no tiene sucursales asignadas.
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {asignacionesUsuario.sucursales.map((sucursal) => {
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {asignacionesUsuario.sucursales.map((sucursal, index) => {
                       const pivot = getPivot(sucursal);
 
                       return (
-                        <article
+                        <motion.article
                           key={sucursal.id}
-                          className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 transition hover:bg-white/[0.08]"
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            duration: 0.28,
+                            delay: Math.min(index * 0.03, 0.18)
+                          }}
+                          className="rounded-3xl border border-white/10 bg-white/[0.055] p-4 transition hover:border-cyan-200/20 hover:bg-white/[0.08]"
                         >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0">
-                              <h4 className="truncate text-base font-bold text-white">
-                                {sucursal.nombre}
-                              </h4>
+                          <div className="flex flex-col gap-4">
+                            <div className="flex items-start gap-3">
+                              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-100 ring-1 ring-cyan-200/10">
+                                <Building2 className="h-5 w-5" />
+                              </div>
 
-                              <p className="mt-1 text-sm text-gray-400">
-                                {sucursal.localidad || 'Sin localidad'} ·{' '}
-                                {sucursal.provincia || 'Sin provincia'}
-                              </p>
+                              <div className="min-w-0">
+                                <h4 className="truncate text-base font-bold text-white">
+                                  {sucursal.nombre}
+                                </h4>
 
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100">
-                                  {formatRole(pivot?.rol_sucursal)}
-                                </span>
-
-                                <span
-                                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                                    pivot?.estado === 'ACTIVO'
-                                      ? 'bg-emerald-400/10 text-emerald-200'
-                                      : 'bg-white/10 text-gray-300'
-                                  }`}
-                                >
-                                  {pivot?.estado || 'SIN_ESTADO'}
-                                </span>
-
-                                {pivot?.es_principal && (
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">
-                                    <Crown className="h-3.5 w-3.5" />
-                                    Principal
-                                  </span>
-                                )}
+                                <p className="mt-1 text-sm text-gray-400">
+                                  {sucursal.localidad || 'Sin localidad'} ·{' '}
+                                  {sucursal.provincia || 'Sin provincia'}
+                                </p>
                               </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-100 ring-1 ring-cyan-200/10">
+                                {formatRole(pivot?.rol_sucursal)}
+                              </span>
+
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-bold ring-1 ${
+                                  pivot?.estado === 'ACTIVO'
+                                    ? 'bg-emerald-400/10 text-emerald-200 ring-emerald-300/10'
+                                    : 'bg-white/10 text-gray-300 ring-white/10'
+                                }`}
+                              >
+                                {pivot?.estado || 'SIN_ESTADO'}
+                              </span>
+
+                              {pivot?.es_principal && (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100 ring-1 ring-amber-200/10">
+                                  <Crown className="h-3.5 w-3.5" />
+                                  Principal
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2 sm:justify-end">
                               <button
                                 type="button"
                                 onClick={() => prefillAsignacion(sucursal)}
-                                className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-gray-200 transition hover:bg-white/10"
+                                className="rounded-2xl border border-white/10 px-4 py-2.5 text-xs font-bold text-gray-200 transition hover:bg-white/10"
                               >
                                 Editar
                               </button>
@@ -1068,13 +1642,13 @@ export default function UsuariosAdmin() {
                               <button
                                 type="button"
                                 onClick={() => deleteAsignacion(sucursal)}
-                                className="rounded-xl border border-red-300/20 bg-red-400/10 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-400/20"
+                                className="rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-2.5 text-xs font-bold text-red-100 transition hover:bg-red-400/20"
                               >
                                 Quitar
                               </button>
                             </div>
                           </div>
-                        </article>
+                        </motion.article>
                       );
                     })}
                   </div>
