@@ -256,7 +256,8 @@ export default function Dashboard() {
       title: 'Usuarios',
       description:
         'Gestión de accesos, roles globales y permisos administrativos.',
-      label: 'US'
+      label: 'US',
+      route: '/dashboard/usuarios'
     },
     {
       title: 'Sucursales',
