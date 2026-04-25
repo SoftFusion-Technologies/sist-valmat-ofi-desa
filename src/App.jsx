@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import logoValmat from './Images/logo_1.png';
 import Home from './pages/Home';
 import ServicioDetalle from './pages/ServicioDetalle';
-
+import NotFound from './pages/NotFound';
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
@@ -49,7 +49,7 @@ function App() {
           element={<ServicioDetalle logoSrc={logoValmat} />}
         />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound logoSrc={logoValmat} />} />
       </Routes>
     </>
   );
