@@ -1,12 +1,20 @@
 // Benjamin Orellana - 2026/04/24 - App principal con rutas internas. El BrowserRouter queda únicamente en main.jsx para evitar Router anidado.
+// Benjamin Orellana - 25/04/2026 - Se agregan rutas públicas y privadas para login y dashboard protegido de VALMAT.
 
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
 import logoValmat from './Images/logo_1.png';
+
 import Home from './pages/Home';
 import ServicioDetalle from './pages/ServicioDetalle';
 import NotFound from './pages/NotFound';
+
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+
+import ProtectedRoute from './Auth/ProtectedRoute';
+
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
@@ -29,7 +37,7 @@ function ScrollToTop() {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: 'instant'
+      behavior: 'auto'
     });
   }, [pathname, hash]);
 
@@ -42,11 +50,25 @@ function App() {
       <ScrollToTop />
 
       <Routes>
+        {/* Benjamin Orellana - 25/04/2026 - Rutas públicas del sitio institucional VALMAT. */}
         <Route path="/" element={<Home logoSrc={logoValmat} />} />
 
         <Route
           path="/servicios/:slug"
           element={<ServicioDetalle logoSrc={logoValmat} />}
+        />
+
+        {/* Benjamin Orellana - 25/04/2026 - Ruta pública de login administrativo VALMAT. */}
+        <Route path="/login" element={<Login logoSrc={logoValmat} />} />
+
+        {/* Benjamin Orellana - 25/04/2026 - Ruta privada inicial para el dashboard interno VALMAT. */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard logoSrc={logoValmat} />
+            </ProtectedRoute>
+          }
         />
 
         <Route path="*" element={<NotFound logoSrc={logoValmat} />} />
