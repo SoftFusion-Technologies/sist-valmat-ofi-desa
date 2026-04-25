@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { HiArrowRight } from 'react-icons/hi2';
 import HeroBackgroundCanvas from '../components/sections/HeroBackgroundCanvas';
+import BeneficiosValmat from '../components/sections/BeneficiosValmat';
 const VISUALS = [
   {
     id: 1,
@@ -579,6 +580,7 @@ function Hero() {
           </div>
         </motion.div>
       </div>
+      <BeneficiosValmat></BeneficiosValmat>
     </section>
   );
 }
