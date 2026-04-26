@@ -1,6 +1,7 @@
 // Benjamin Orellana - 2026/04/24 - Sección de servicios 2.0 con navegación a páginas individuales, foco mobile, video expandible y mayor orientación comercial.
+// Benjamin Orellana - 25/04/2026 - Se migra la sección a servicios públicos dinámicos y se agrega filtro por tipo de cliente.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,10 +10,66 @@ import {
   HiCheckBadge,
   HiChevronRight,
   HiClock,
+  HiShieldCheck,
   HiSparkles,
+  HiWrenchScrewdriver,
   HiXMark
 } from 'react-icons/hi2';
-import { services } from '../data/valmatServices';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+const getPublicUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+
+  const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
+
+  return `${API_URL}${normalizedUrl}`;
+};
+
+function getMediaByPriority(service) {
+  const media = Array.isArray(service?.media) ? service.media : [];
+
+  const activeMedia = media.filter((item) => {
+    const activo =
+      item.activo === undefined ||
+      item.activo === null ||
+      item.activo === true ||
+      item.activo === 1 ||
+      item.activo === '1' ||
+      item.activo === 'true';
+
+    return activo && item.archivo_url;
+  });
+
+  return (
+    activeMedia.find(
+      (item) =>
+        item.es_principal === true ||
+        item.es_principal === 1 ||
+        item.es_principal === '1'
+    ) ||
+    activeMedia.find(
+      (item) => String(item.bloque || '').toUpperCase() === 'PRINCIPAL'
+    ) ||
+    activeMedia.find(
+      (item) => String(item.bloque || '').toUpperCase() === 'SHOWCASE'
+    ) ||
+    activeMedia.find(
+      (item) => String(item.bloque || '').toUpperCase() === 'REEL'
+    ) ||
+    activeMedia[0] ||
+    null
+  );
+}
+
+function normalizeMediaType(value) {
+  const type = String(value || '').toUpperCase();
+
+  if (type === 'IMAGEN' || type === 'IMAGE') return 'image';
+
+  return 'video';
+}
 
 const container = {
   hidden: {},
@@ -33,10 +90,207 @@ const fadeUp = {
   }
 };
 
+const tiposCliente = [
+  {
+    label: 'Todos',
+    value: ''
+  },
+  {
+    label: 'Particular',
+    value: 'PARTICULAR'
+  },
+  {
+    label: 'Empresa',
+    value: 'EMPRESA'
+  },
+  {
+    label: 'Obra',
+    value: 'OBRA'
+  }
+];
+
+const iconMap = {
+  HiWrenchScrewdriver,
+  HiShieldCheck,
+  HiSparkles
+};
+
+function getIconByKey(iconKey) {
+  return iconMap[iconKey] || HiSparkles;
+}
+
+function normalizeTextItem(item) {
+  if (!item) return '';
+
+  if (typeof item === 'string') return item;
+
+  return (
+    item.titulo ||
+    item.title ||
+    item.descripcion ||
+    item.description ||
+    item.texto ||
+    ''
+  );
+}
+
+function normalizeItems(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items.map(normalizeTextItem).filter(Boolean);
+}
+
+// Benjamin Orellana - 25/04/2026 - Normaliza perfiles/tipos de cliente dinámicos para filtros públicos.
+function normalizeTipoCliente(tipo = {}) {
+  return {
+    id: tipo.id,
+    codigo: tipo.codigo || '',
+    nombre: tipo.nombre || tipo.codigo || '',
+    descripcion: tipo.descripcion || '',
+    orden_visual: Number(tipo.orden_visual || 0),
+    activo:
+      tipo.activo === undefined ||
+      tipo.activo === null ||
+      tipo.activo === true ||
+      tipo.activo === 1 ||
+      tipo.activo === '1' ||
+      tipo.activo === 'true'
+  };
+}
+
+// Benjamin Orellana - 25/04/2026 - Obtiene tipos de clientes activos desde backend para no usar filtros estáticos.
+async function fetchTiposClientesPublicos() {
+  const response = await fetch(
+    `${API_URL}/servicios-tipos-clientes?activo=true`
+  );
+  const data = await response.json();
+
+  if (!response.ok || data?.ok === false) {
+    throw new Error(
+      data?.message ||
+        data?.msg ||
+        data?.error ||
+        'No se pudieron cargar los perfiles de cliente.'
+    );
+  }
+
+  const tipos = Array.isArray(data?.tiposClientes)
+    ? data.tiposClientes
+    : Array.isArray(data?.tipos_clientes)
+      ? data.tipos_clientes
+      : Array.isArray(data?.tipos)
+        ? data.tipos
+        : Array.isArray(data)
+          ? data
+          : [];
+
+  return tipos
+    .map(normalizeTipoCliente)
+    .filter((tipo) => tipo.activo && tipo.codigo)
+    .sort((a, b) => Number(a.orden_visual || 0) - Number(b.orden_visual || 0));
+}
+
+function normalizeService(service) {
+  const Icon = getIconByKey(service.iconKey || service.icon_key);
+  const selectedMedia = getMediaByPriority(service);
+
+  const rawMediaSrc =
+    selectedMedia?.archivo_url ||
+    selectedMedia?.url ||
+    service.mediaSrc ||
+    service.media_src ||
+    '';
+
+  const rawMediaPoster =
+    selectedMedia?.poster_url ||
+    service.mediaPoster ||
+    service.media_poster ||
+    '';
+
+  const rawMediaType =
+    selectedMedia?.tipo_media ||
+    service.mediaType ||
+    service.media_type ||
+    'VIDEO';
+
+  return {
+    ...service,
+    icon: Icon,
+    slug: service.slug || '',
+    eyebrow: service.eyebrow || 'Servicio VALMAT',
+    title: service.title || service.titulo || 'Servicio',
+    shortTitle:
+      service.shortTitle ||
+      service.short_title ||
+      service.title ||
+      service.titulo ||
+      'Servicio',
+    subtitle: service.subtitle || service.subtitulo || '',
+    intent:
+      service.intent ||
+      service.subtitle ||
+      service.subtitulo ||
+      service.description ||
+      service.descripcion ||
+      '',
+    description:
+      service.description ||
+      service.descripcion ||
+      service.subtitle ||
+      service.subtitulo ||
+      '',
+    ctaLabel:
+      service.ctaLabel || service.cta_label || 'Solicitar visita técnica',
+    secondaryCtaLabel:
+      service.secondaryCtaLabel ||
+      service.secondary_cta_label ||
+      'Ver servicio completo',
+    mediaType: normalizeMediaType(rawMediaType),
+    mediaSrc: getPublicUrl(rawMediaSrc),
+    mediaPoster: getPublicUrl(rawMediaPoster),
+    features: normalizeItems(service.features),
+    benefits: normalizeItems(service.benefits),
+    painPoints: normalizeItems(service.painPoints || service.pain_points),
+    process: normalizeItems(service.process),
+    useCases: normalizeItems(service.useCases || service.use_cases),
+    trustItems: normalizeItems(service.trustItems || service.trust_items),
+    orden_visual: Number(service.orden_visual || 1),
+    media: Array.isArray(service.media) ? service.media : []
+  };
+}
+
+async function fetchServiciosPublicos(tipoClienteCodigo = '') {
+  const query = tipoClienteCodigo
+    ? `?tipo_cliente_codigo=${encodeURIComponent(tipoClienteCodigo)}`
+    : '';
+
+  const response = await fetch(`${API_URL}/servicios-publicos${query}`);
+  const data = await response.json();
+
+  if (!response.ok || data?.ok === false) {
+    throw new Error(
+      data?.message ||
+        data?.msg ||
+        data?.error ||
+        'No se pudieron cargar los servicios.'
+    );
+  }
+
+  const servicios = Array.isArray(data?.servicios)
+    ? data.servicios
+    : Array.isArray(data)
+      ? data
+      : [];
+
+  return servicios
+    .map(normalizeService)
+    .sort((a, b) => Number(a.orden_visual || 0) - Number(b.orden_visual || 0));
+}
+
 function ExpandedServiceVideo({ service, onClose }) {
   if (!service) return null;
 
-  const Icon = service.icon;
+  const Icon = service.icon || HiSparkles;
 
   return (
     <AnimatePresence>
@@ -80,23 +334,29 @@ function ExpandedServiceVideo({ service, onClose }) {
           </button>
 
           <div className="relative aspect-[16/10] w-full bg-slate-950 sm:aspect-video">
-            {service.mediaType === 'video' ? (
-              <video
-                className="h-full w-full object-cover"
-                src={service.mediaSrc}
-                poster={service.mediaPoster}
-                autoPlay
-                muted
-                loop
-                playsInline
-                controls
-              />
+            {service.mediaSrc ? (
+              service.mediaType === 'video' ? (
+                <video
+                  className="h-full w-full object-cover"
+                  src={service.mediaSrc}
+                  poster={service.mediaPoster}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                />
+              ) : (
+                <img
+                  src={service.mediaSrc}
+                  alt={service.title}
+                  className="h-full w-full object-cover"
+                />
+              )
             ) : (
-              <img
-                src={service.mediaSrc}
-                alt={service.title}
-                className="h-full w-full object-cover"
-              />
+              <div className="flex h-full w-full items-center justify-center bg-slate-950">
+                <HiSparkles className="text-[2rem] text-cyan-100/70" />
+              </div>
             )}
 
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-[linear-gradient(180deg,rgba(2,6,23,0)_0%,rgba(2,6,23,0.80)_100%)]" />
@@ -126,25 +386,29 @@ function ServiceMedia({ service, onExpand }) {
     <div className="relative h-[190px] overflow-hidden rounded-[28px] border border-white/70 bg-slate-950 shadow-[0_22px_54px_rgba(15,23,42,0.14)] sm:h-[210px] lg:h-[190px] 2xl:h-[210px]">
       <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(2,6,23,0.03)_0%,rgba(2,6,23,0.08)_34%,rgba(2,6,23,0.74)_100%)]" />
 
-      {service.mediaType === 'video' ? (
-        <video
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.055]"
-          src={service.mediaSrc}
-          poster={service.mediaPoster}
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
+      {service.mediaSrc ? (
+        service.mediaType === 'video' ? (
+          <video
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.055]"
+            src={service.mediaSrc}
+            poster={service.mediaPoster}
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+        ) : (
+          <img
+            src={service.mediaSrc}
+            alt={service.title}
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.055]"
+          />
+        )
       ) : (
-        <img
-          src={service.mediaSrc}
-          alt={service.title}
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.055]"
-        />
+        <div className="flex h-full w-full items-center justify-center bg-slate-950">
+          <HiSparkles className="text-[2rem] text-cyan-100/70" />
+        </div>
       )}
-
-
 
       <button
         type="button"
@@ -174,8 +438,51 @@ function ServiceMedia({ service, onExpand }) {
   );
 }
 
+// Benjamin Orellana - 25/04/2026 - Filtro público por tipo de cliente sin alterar la estética general de la sección.
+// Benjamin Orellana - 25/04/2026 - Filtro público por perfiles de cliente dinámicos desde servicios_tipos_clientes.
+function ClientTypeFilter({ activeType, onChange, loading, tiposCliente }) {
+  const filterOptions = [
+    {
+      id: 'TODOS',
+      label: 'Todos',
+      value: ''
+    },
+    ...tiposCliente.map((tipo) => ({
+      id: tipo.id,
+      label: tipo.nombre || tipo.codigo,
+      value: tipo.codigo
+    }))
+  ];
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      className="mx-auto mt-7 flex max-w-fit gap-2 overflow-x-auto rounded-full border border-sky-100 bg-white/82 p-1.5 shadow-[0_14px_34px_rgba(15,23,42,0.055)] backdrop-blur-xl"
+    >
+      {filterOptions.map((tipo) => {
+        const active = activeType === tipo.value;
+
+        return (
+          <button
+            key={tipo.id || tipo.value || 'TODOS'}
+            type="button"
+            onClick={() => onChange(tipo.value)}
+            disabled={loading}
+            className={`cuerpo shrink-0 rounded-full px-4 py-2 text-[0.76rem] font-bold uppercase tracking-[0.14em] transition-all duration-300 ${
+              active
+                ? 'bg-[var(--color-primary)] text-white shadow-[0_14px_30px_rgba(25,211,223,0.22)]'
+                : 'text-slate-500 hover:bg-sky-50 hover:text-[var(--color-primary)]'
+            } ${loading ? 'cursor-wait opacity-70' : ''}`}
+          >
+            {tipo.label}
+          </button>
+        );
+      })}
+    </motion.div>
+  );
+}
 // Benjamin Orellana - 2026/04/24 - Selector mobile con opción "Todos" para mostrar todos los servicios o filtrar una sola card.
-function ServiceQuickSelector({ selectedSlug, onSelect }) {
+function ServiceQuickSelector({ services, selectedSlug, onSelect }) {
   return (
     <div className="mt-8 flex gap-2 overflow-x-auto pb-2 lg:hidden">
       <button
@@ -192,11 +499,11 @@ function ServiceQuickSelector({ selectedSlug, onSelect }) {
 
       {services.map((service) => {
         const active = selectedSlug === service.slug;
-        const Icon = service.icon;
+        const Icon = service.icon || HiSparkles;
 
         return (
           <button
-            key={service.id}
+            key={service.id || service.slug}
             type="button"
             onClick={() => onSelect(service.slug)}
             className={`cuerpo flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[0.78rem] font-bold transition-all duration-300 ${
@@ -216,7 +523,7 @@ function ServiceQuickSelector({ selectedSlug, onSelect }) {
 
 function ServiceCard({ service, index, onExpand, selectedSlug }) {
   const navigate = useNavigate();
-  const Icon = service.icon;
+  const Icon = service.icon || HiSparkles;
   const isHighlighted = selectedSlug === service.slug;
 
   const goToDetail = () => {
@@ -293,7 +600,7 @@ function ServiceCard({ service, index, onExpand, selectedSlug }) {
           <div className="mt-4 grid gap-2">
             {service.features.slice(0, 3).map((feature, featureIndex) => (
               <motion.div
-                key={feature}
+                key={`${service.slug}-${feature}-${featureIndex}`}
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.45 }}
@@ -352,69 +659,146 @@ function ServiceCard({ service, index, onExpand, selectedSlug }) {
   );
 }
 
-function CommercialStrip() {
-  const items = [
-    {
-      title: 'Servicio planificado',
-      text: 'Cada trabajo se organiza por alcance, zona y prioridad.'
-    },
-    {
-      title: 'Detalle profesional',
-      text: 'La limpieza no se improvisa: se revisa, se ejecuta y se controla.'
-    },
-    {
-      title: 'Pensado para cotizar',
-      text: 'El formulario permite captar consultas con datos útiles desde mobile.'
-    }
-  ];
-
+function ServiciosLoading() {
   return (
-    <motion.div
-      variants={fadeUp}
-      className="mt-8 grid gap-3 rounded-[30px] border border-sky-100 bg-white/78 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.06)] backdrop-blur-xl md:grid-cols-3"
-    >
-      {items.map((item, index) => (
+    <div className="mt-10 grid gap-5 lg:grid-cols-3">
+      {[1, 2, 3].map((item) => (
         <div
-          key={item.title}
-          className="rounded-[24px] border border-sky-50 bg-[linear-gradient(180deg,#ffffff_0%,#f4fcff_100%)] p-4"
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-sm font-black text-white shadow-[0_12px_24px_rgba(25,211,223,0.22)]">
-              {index + 1}
-            </span>
-
-            <h3 className="titulo text-[1rem] leading-tight text-slate-950">
-              {item.title}
-            </h3>
-          </div>
-
-          <p className="cuerpo mt-3 text-[0.84rem] leading-6 text-slate-600">
-            {item.text}
-          </p>
-        </div>
+          key={item}
+          className="h-[480px] animate-pulse rounded-[36px] border border-sky-100/90 bg-white/70 shadow-[0_26px_80px_rgba(15,23,42,0.06)]"
+        />
       ))}
-    </motion.div>
+    </div>
+  );
+}
+
+function ServiciosError({ error, onRetry }) {
+  return (
+    <div className="mx-auto mt-10 max-w-3xl rounded-[30px] border border-red-100 bg-red-50/90 p-5 text-center shadow-[0_18px_52px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+      <h3 className="titulo text-xl text-red-950">
+        No se pudieron cargar los servicios
+      </h3>
+
+      <p className="cuerpo mx-auto mt-2 max-w-xl text-[0.9rem] leading-6 text-red-700">
+        {error}
+      </p>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        className="cuerpo mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-3 text-[0.82rem] font-semibold text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-red-700"
+      >
+        Reintentar
+      </button>
+    </div>
+  );
+}
+
+function ServiciosEmpty() {
+  return (
+    <div className="mx-auto mt-10 max-w-3xl rounded-[30px] border border-sky-100 bg-white/78 p-6 text-center shadow-[0_18px_52px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+      <h3 className="titulo text-xl text-slate-950">
+        No hay servicios disponibles
+      </h3>
+
+      <p className="cuerpo mx-auto mt-2 max-w-xl text-[0.9rem] leading-6 text-slate-600">
+        Cuando se activen servicios para este perfil, se mostrarán
+        automáticamente.
+      </p>
+    </div>
   );
 }
 
 function Servicios() {
   const [expandedService, setExpandedService] = useState(null);
+  const [services, setServices] = useState([]);
+  const [tiposCliente, setTiposCliente] = useState([]);
+  const [activeType, setActiveType] = useState('');
+  const [loadingTipos, setLoadingTipos] = useState(true);
 
   // Benjamin Orellana - 2026/04/24 - En mobile inicia sin servicio seleccionado para mostrar las 3 cards.
   const [selectedSlug, setSelectedSlug] = useState(null);
+
+  const [loading, setLoading] = useState(true);
+  const [softLoading, setSoftLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Benjamin Orellana - 25/04/2026 - Carga perfiles activos para armar filtros públicos dinámicos.
+const loadTiposCliente = async () => {
+  try {
+    setLoadingTipos(true);
+
+    const data = await fetchTiposClientesPublicos();
+
+    setTiposCliente(data);
+
+    setActiveType((currentType) => {
+      if (!currentType) return '';
+
+      const exists = data.some((tipo) => tipo.codigo === currentType);
+
+      return exists ? currentType : '';
+    });
+  } catch (err) {
+    setTiposCliente([]);
+  } finally {
+    setLoadingTipos(false);
+  }
+};
+
+  const loadServices = async (tipoClienteCodigo = '', mode = 'initial') => {
+    try {
+      if (mode === 'initial') {
+        setLoading(true);
+      } else {
+        setSoftLoading(true);
+      }
+
+      setError('');
+
+      const data = await fetchServiciosPublicos(tipoClienteCodigo);
+
+      setServices(data);
+
+      setSelectedSlug((currentSlug) => {
+        if (!currentSlug) return null;
+
+        const exists = data.some((service) => service.slug === currentSlug);
+
+        return exists ? currentSlug : null;
+      });
+    } catch (err) {
+      setServices([]);
+      setSelectedSlug(null);
+      setError(err.message || 'No se pudieron cargar los servicios.');
+    } finally {
+      setLoading(false);
+      setSoftLoading(false);
+    }
+  };
+
+useEffect(() => {
+  loadTiposCliente();
+  loadServices('', 'initial');
+}, []);
+
+  const handleTypeChange = (tipoClienteCodigo) => {
+    setActiveType(tipoClienteCodigo);
+    loadServices(tipoClienteCodigo, 'soft');
+  };
 
   const selectedService = useMemo(() => {
     if (!selectedSlug) return null;
 
     return services.find((service) => service.slug === selectedSlug) || null;
-  }, [selectedSlug]);
+  }, [services, selectedSlug]);
 
   // Benjamin Orellana - 2026/04/24 - En mobile, si hay servicio seleccionado, se muestra solo esa card; si no, se muestran todos.
   const visibleMobileServices = useMemo(() => {
     if (!selectedSlug) return services;
 
     return services.filter((service) => service.slug === selectedSlug);
-  }, [selectedSlug]);
+  }, [services, selectedSlug]);
 
   return (
     <section
@@ -468,77 +852,107 @@ function Servicios() {
             presentación final a la altura de cada necesidad.
           </motion.p>
 
+          <ClientTypeFilter
+            activeType={activeType}
+            onChange={handleTypeChange}
+            loading={softLoading || loading || loadingTipos}
+            tiposCliente={tiposCliente}
+          />
+          {softLoading && (
+            <motion.p
+              variants={fadeUp}
+              className="cuerpo mt-3 text-[0.78rem] font-semibold text-slate-400"
+            >
+              Actualizando servicios...
+            </motion.p>
+          )}
         </motion.div>
 
-        <ServiceQuickSelector
-          selectedSlug={selectedSlug}
-          onSelect={setSelectedSlug}
-        />
+        {loading ? (
+          <ServiciosLoading />
+        ) : error ? (
+          <ServiciosError
+            error={error}
+            onRetry={() => loadServices(activeType, 'initial')}
+          />
+        ) : services.length === 0 ? (
+          <ServiciosEmpty />
+        ) : (
+          <>
+            <ServiceQuickSelector
+              services={services}
+              selectedSlug={selectedSlug}
+              onSelect={setSelectedSlug}
+            />
 
-        <div className="mt-6 rounded-[30px] border border-cyan-100 bg-white/74 p-4 shadow-[0_18px_52px_rgba(15,23,42,0.05)] backdrop-blur-xl lg:hidden">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/12 text-[var(--color-primary)]">
-              <HiSparkles className="text-[1.1rem]" />
-            </span>
+            <div className="mt-6 rounded-[30px] border border-cyan-100 bg-white/74 p-4 shadow-[0_18px_52px_rgba(15,23,42,0.05)] backdrop-blur-xl lg:hidden">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/12 text-[var(--color-primary)]">
+                  <HiSparkles className="text-[1.1rem]" />
+                </span>
 
-            <div>
-              <p className="cuerpo text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-400">
-                {selectedService ? 'Servicio seleccionado' : 'Vista general'}
-              </p>
+                <div>
+                  <p className="cuerpo text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-400">
+                    {selectedService
+                      ? 'Servicio seleccionado'
+                      : 'Vista general'}
+                  </p>
 
-              <h3 className="titulo mt-1 text-xl text-slate-950">
-                {selectedService
-                  ? selectedService.title
-                  : 'Todos los servicios'}
-              </h3>
+                  <h3 className="titulo mt-1 text-xl text-slate-950">
+                    {selectedService
+                      ? selectedService.title
+                      : 'Todos los servicios'}
+                  </h3>
 
-              <p className="cuerpo mt-2 text-[0.9rem] leading-6 text-slate-600">
-                {selectedService
-                  ? selectedService.intent
-                  : 'Elegí un servicio para ver solo esa opción o mantené esta vista para comparar las alternativas disponibles.'}
-              </p>
+                  <p className="cuerpo mt-2 text-[0.9rem] leading-6 text-slate-600">
+                    {selectedService
+                      ? selectedService.intent
+                      : 'Elegí un servicio para ver solo esa opción o mantené esta vista para comparar las alternativas disponibles.'}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Benjamin Orellana - 2026/04/24 - Grilla mobile filtrable: muestra todos o solo el servicio seleccionado. */}
-        <div className="mt-7 grid gap-5 lg:hidden">
-          <AnimatePresence mode="popLayout">
-            {visibleMobileServices.map((service, index) => (
-              <motion.div
-                key={service.slug}
-                layout
-                initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                transition={{
-                  duration: 0.36,
-                  ease: [0.22, 1, 0.36, 1]
-                }}
-              >
+            {/* Benjamin Orellana - 2026/04/24 - Grilla mobile filtrable: muestra todos o solo el servicio seleccionado. */}
+            <div className="mt-7 grid gap-5 lg:hidden">
+              <AnimatePresence mode="popLayout">
+                {visibleMobileServices.map((service, index) => (
+                  <motion.div
+                    key={service.slug}
+                    layout
+                    initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                    transition={{
+                      duration: 0.36,
+                      ease: [0.22, 1, 0.36, 1]
+                    }}
+                  >
+                    <ServiceCard
+                      service={service}
+                      index={index}
+                      onExpand={setExpandedService}
+                      selectedSlug={selectedSlug}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Benjamin Orellana - 2026/04/24 - Desktop mantiene siempre las cards visibles para comparar servicios. */}
+            <div className="mt-10 hidden gap-5 lg:grid lg:grid-cols-3">
+              {services.map((service, index) => (
                 <ServiceCard
+                  key={service.id || service.slug}
                   service={service}
                   index={index}
                   onExpand={setExpandedService}
                   selectedSlug={selectedSlug}
                 />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* Benjamin Orellana - 2026/04/24 - Desktop mantiene siempre las 3 cards visibles para comparar servicios. */}
-        <div className="mt-10 hidden gap-5 lg:grid lg:grid-cols-3">
-          {services.map((service, index) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              index={index}
-              onExpand={setExpandedService}
-              selectedSlug={selectedSlug}
-            />
-          ))}
-        </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

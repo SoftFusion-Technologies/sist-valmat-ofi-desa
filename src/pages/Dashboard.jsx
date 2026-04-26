@@ -245,17 +245,19 @@ export default function Dashboard() {
       label: 'SU',
       route: '/dashboard/sucursales'
     },
+
+    {
+      title: 'Servicios',
+      description:
+        'Catálogo de limpieza técnica, oficinas, final de obra y mantenimiento.',
+      label: 'SV',
+      route: '/dashboard/servicios'
+    },
     {
       title: 'Clientes',
       description:
         'Base comercial y operativa de clientes particulares y empresas.',
       label: 'CL'
-    },
-    {
-      title: 'Servicios',
-      description:
-        'Catálogo de limpieza técnica, oficinas, final de obra y mantenimiento.',
-      label: 'SV'
     },
     {
       title: 'Solicitudes web',

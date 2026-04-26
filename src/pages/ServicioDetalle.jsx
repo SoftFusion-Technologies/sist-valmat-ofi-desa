@@ -1,6 +1,7 @@
 // Benjamin Orellana - 2026/04/24 - Página individual de servicio 2.0 con estructura comercial, CTA sticky mobile, FAQs y formulario integrado.
+// Benjamin Orellana - 25/04/2026 - Se migra el detalle de servicio a consumo público dinámico desde backend.
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,12 +13,74 @@ import {
   HiClock,
   HiQuestionMarkCircle,
   HiShieldCheck,
-  HiSparkles
+  HiSparkles,
+  HiWrenchScrewdriver
 } from 'react-icons/hi2';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Contacto from '../sections/Contacto';
-import { getServiceBySlug, services } from '../data/valmatServices';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+// Benjamin Orellana - 25/04/2026 - Resuelve URLs públicas de media local subida al backend.
+const getPublicUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+
+  const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
+
+  return `${API_URL}${normalizedUrl}`;
+};
+
+// Benjamin Orellana - 25/04/2026 - Normaliza valores booleanos recibidos desde MySQL/Sequelize.
+const isTruthy = (value) => {
+  return value === true || value === 1 || value === '1' || value === 'true';
+};
+
+// Benjamin Orellana - 25/04/2026 - Valida media activa para priorizar archivos subidos desde dashboard.
+const isActiveMedia = (item) => {
+  return (
+    item?.activo === undefined ||
+    item?.activo === null ||
+    item?.activo === true ||
+    item?.activo === 1 ||
+    item?.activo === '1' ||
+    item?.activo === 'true'
+  );
+};
+
+// Benjamin Orellana - 25/04/2026 - Selecciona la media principal del servicio respetando prioridad visual.
+function getMediaByPriority(service) {
+  const media = Array.isArray(service?.media) ? service.media : [];
+
+  const activeMedia = media.filter((item) => {
+    return isActiveMedia(item) && item.archivo_url;
+  });
+
+  return (
+    activeMedia.find((item) => isTruthy(item.es_principal)) ||
+    activeMedia.find(
+      (item) => String(item.bloque || '').toUpperCase() === 'PRINCIPAL'
+    ) ||
+    activeMedia.find(
+      (item) => String(item.bloque || '').toUpperCase() === 'SHOWCASE'
+    ) ||
+    activeMedia.find(
+      (item) => String(item.bloque || '').toUpperCase() === 'REEL'
+    ) ||
+    activeMedia[0] ||
+    null
+  );
+}
+
+// Benjamin Orellana - 25/04/2026 - Convierte tipo_media backend a tipo usable por el componente.
+function normalizeMediaType(value) {
+  const type = String(value || '').toUpperCase();
+
+  if (type === 'IMAGEN' || type === 'IMAGE') return 'image';
+
+  return 'video';
+}
 
 const container = {
   hidden: {},
@@ -38,28 +101,248 @@ const fadeUp = {
   }
 };
 
+const iconMap = {
+  HiWrenchScrewdriver,
+  HiShieldCheck,
+  HiSparkles
+};
+
+function getIconByKey(iconKey) {
+  return iconMap[iconKey] || HiSparkles;
+}
+
+function normalizeTextItem(item) {
+  if (!item) return '';
+
+  if (typeof item === 'string') return item;
+
+  return (
+    item.titulo ||
+    item.title ||
+    item.descripcion ||
+    item.description ||
+    item.texto ||
+    ''
+  );
+}
+
+function normalizeItems(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items.map(normalizeTextItem).filter(Boolean);
+}
+
+function normalizeFaq(items) {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map((item) => ({
+      id: item.id,
+      question: item.question || item.pregunta || '',
+      answer: item.answer || item.respuesta || '',
+      orden_visual: Number(item.orden_visual || 1)
+    }))
+    .filter((item) => item.question && item.answer)
+    .sort((a, b) => Number(a.orden_visual || 0) - Number(b.orden_visual || 0));
+}
+
+// Benjamin Orellana - 25/04/2026 - Toma media subida real desde servicios_media y arma URLs públicas absolutas.
+function getMediaFromService(service) {
+  const selectedMedia = getMediaByPriority(service);
+
+  const rawMediaSrc =
+    selectedMedia?.archivo_url ||
+    selectedMedia?.url ||
+    service.mediaSrc ||
+    service.media_src ||
+    '';
+
+  const rawMediaPoster =
+    selectedMedia?.poster_url ||
+    service.mediaPoster ||
+    service.media_poster ||
+    '';
+
+  const rawMediaType =
+    selectedMedia?.tipo_media ||
+    service.mediaType ||
+    service.media_type ||
+    'VIDEO';
+
+  return {
+    mediaSrc: getPublicUrl(rawMediaSrc),
+    mediaPoster: getPublicUrl(rawMediaPoster),
+    mediaType: normalizeMediaType(rawMediaType)
+  };
+}
+
+function normalizeService(service = {}) {
+  const { mediaSrc, mediaPoster, mediaType } = getMediaFromService(service);
+  const Icon = getIconByKey(service.iconKey || service.icon_key);
+
+  return {
+    ...service,
+    icon: Icon,
+    id: service.id,
+    slug: service.slug || '',
+    eyebrow: service.eyebrow || 'Servicio VALMAT',
+    title: service.title || service.titulo || 'Servicio',
+    shortTitle:
+      service.shortTitle ||
+      service.short_title ||
+      service.title ||
+      service.titulo ||
+      'Servicio',
+    subtitle:
+      service.subtitle ||
+      service.subtitulo ||
+      service.description ||
+      service.descripcion ||
+      '',
+    intent:
+      service.intent ||
+      service.subtitle ||
+      service.subtitulo ||
+      service.description ||
+      service.descripcion ||
+      '',
+    description:
+      service.description ||
+      service.descripcion ||
+      service.subtitle ||
+      service.subtitulo ||
+      '',
+    detailTitle:
+      service.detailTitle ||
+      service.detail_title ||
+      service.title ||
+      service.titulo ||
+      'Servicio VALMAT',
+    detailIntro:
+      service.detailIntro ||
+      service.detail_intro ||
+      service.description ||
+      service.descripcion ||
+      service.subtitle ||
+      service.subtitulo ||
+      '',
+    salesText:
+      service.salesText ||
+      service.sales_text ||
+      service.intent ||
+      service.description ||
+      service.descripcion ||
+      '',
+    ctaLabel:
+      service.ctaLabel || service.cta_label || 'Solicitar visita técnica',
+    secondaryCtaLabel:
+      service.secondaryCtaLabel ||
+      service.secondary_cta_label ||
+      'Ver servicio completo',
+    mediaType,
+    mediaSrc,
+    mediaPoster,
+    features: normalizeItems(service.features),
+    benefits: normalizeItems(service.benefits),
+    painPoints: normalizeItems(service.painPoints || service.pain_points),
+    process: normalizeItems(service.process),
+    useCases: normalizeItems(service.useCases || service.use_cases),
+    trustItems: normalizeItems(service.trustItems || service.trust_items),
+    faq: normalizeFaq(service.faq),
+    orden_visual: Number(service.orden_visual || 1),
+    media: Array.isArray(service.media) ? service.media : []
+  };
+}
+
+async function safeJson(response) {
+  const text = await response.text();
+
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+async function fetchServicioBySlug(slug) {
+  const response = await fetch(
+    `${API_URL}/servicios-publicos/${encodeURIComponent(slug)}`
+  );
+
+  const data = await safeJson(response);
+
+  if (!response.ok || data?.ok === false) {
+    throw new Error(
+      data?.message ||
+        data?.msg ||
+        data?.error ||
+        'No se pudo cargar el servicio solicitado.'
+    );
+  }
+
+  const service = data?.servicio || data?.data || data;
+
+  if (!service || !service.slug) {
+    return null;
+  }
+
+  return normalizeService(service);
+}
+
+async function fetchServiciosPublicos() {
+  const response = await fetch(`${API_URL}/servicios-publicos`);
+  const data = await safeJson(response);
+
+  if (!response.ok || data?.ok === false) {
+    throw new Error(
+      data?.message ||
+        data?.msg ||
+        data?.error ||
+        'No se pudieron cargar los servicios relacionados.'
+    );
+  }
+
+  const servicios = Array.isArray(data?.servicios)
+    ? data.servicios
+    : Array.isArray(data)
+      ? data
+      : [];
+
+  return servicios
+    .map(normalizeService)
+    .sort((a, b) => Number(a.orden_visual || 0) - Number(b.orden_visual || 0));
+}
+
 function ServiceVideoBlock({ service }) {
   return (
     <div className="relative overflow-hidden rounded-[34px] border border-white/70 bg-slate-950 shadow-[0_34px_100px_rgba(15,23,42,0.18)]">
       <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(2,6,23,0.03)_0%,rgba(2,6,23,0.08)_38%,rgba(2,6,23,0.72)_100%)]" />
 
-      {service.mediaType === 'video' ? (
-        <video
-          className="h-[360px] w-full object-cover sm:h-[460px] lg:h-[560px]"
-          src={service.mediaSrc}
-          poster={service.mediaPoster}
-          autoPlay
-          muted
-          loop
-          playsInline
-          controls
-        />
+      {service.mediaSrc ? (
+        service.mediaType === 'video' ? (
+          <video
+            className="h-[360px] w-full object-cover sm:h-[460px] lg:h-[560px]"
+            src={service.mediaSrc}
+            poster={service.mediaPoster}
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls
+          />
+        ) : (
+          <img
+            src={service.mediaSrc}
+            alt={service.title}
+            className="h-[360px] w-full object-cover sm:h-[460px] lg:h-[560px]"
+          />
+        )
       ) : (
-        <img
-          src={service.mediaSrc}
-          alt={service.title}
-          className="h-[360px] w-full object-cover sm:h-[460px] lg:h-[560px]"
-        />
+        <div className="flex h-[360px] w-full items-center justify-center bg-[linear-gradient(135deg,#020617_0%,#0f172a_100%)] sm:h-[460px] lg:h-[560px]">
+          <HiSparkles className="text-[2.4rem] text-cyan-100/70" />
+        </div>
       )}
 
       <div className="absolute bottom-5 left-5 right-5 z-20 rounded-[26px] border border-white/16 bg-white/14 p-4 text-white shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:p-5">
@@ -135,6 +418,8 @@ function TrustBar() {
 }
 
 function InfoCard({ title, items, icon: Icon }) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+
   return (
     <motion.div
       variants={fadeUp}
@@ -169,6 +454,8 @@ function InfoCard({ title, items, icon: Icon }) {
 }
 
 function ProcessTimeline({ steps }) {
+  if (!Array.isArray(steps) || steps.length === 0) return null;
+
   return (
     <motion.div
       variants={fadeUp}
@@ -226,6 +513,8 @@ function ProcessTimeline({ steps }) {
 function FAQBlock({ faq }) {
   const [openIndex, setOpenIndex] = useState(0);
 
+  if (!Array.isArray(faq) || faq.length === 0) return null;
+
   return (
     <motion.div
       variants={fadeUp}
@@ -253,7 +542,7 @@ function FAQBlock({ faq }) {
 
           return (
             <div
-              key={item.question}
+              key={item.id || item.question}
               className="overflow-hidden rounded-[22px] border border-sky-100 bg-white"
             >
               <button
@@ -362,10 +651,12 @@ function ConversionBand({ service }) {
   );
 }
 
-function OtherServices({ currentSlug }) {
-  const relatedServices = services.filter(
-    (service) => service.slug !== currentSlug
-  );
+function OtherServices({ currentSlug, services }) {
+  const relatedServices = Array.isArray(services)
+    ? services.filter((service) => service.slug !== currentSlug).slice(0, 4)
+    : [];
+
+  if (relatedServices.length === 0) return null;
 
   return (
     <section className="relative bg-white px-5 py-14 sm:px-6 lg:px-8">
@@ -392,11 +683,11 @@ function OtherServices({ currentSlug }) {
 
         <div className="mt-7 grid gap-4 md:grid-cols-2">
           {relatedServices.map((service) => {
-            const Icon = service.icon;
+            const Icon = service.icon || HiSparkles;
 
             return (
               <Link
-                key={service.id}
+                key={service.id || service.slug}
                 to={`/servicios/${service.slug}`}
                 className="group overflow-hidden rounded-[30px] border border-sky-100 bg-[linear-gradient(180deg,#ffffff_0%,#f4fcff_100%)] p-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-200 hover:shadow-[0_26px_70px_rgba(15,23,42,0.10)]"
               >
@@ -428,46 +719,144 @@ function OtherServices({ currentSlug }) {
   );
 }
 
+function ServicioDetalleLoading({ logoSrc }) {
+  return (
+    <>
+      <Navbar logoSrc={logoSrc} />
+
+      <main className="-mt-20 min-h-screen overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f2fbfe_52%,#ffffff_100%)] px-5 pb-20 pt-32 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="h-11 w-36 animate-pulse rounded-full bg-sky-100" />
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+            <div>
+              <div className="h-10 w-3/4 animate-pulse rounded-2xl bg-sky-100 sm:h-14" />
+              <div className="mt-5 h-6 w-full animate-pulse rounded-full bg-sky-100" />
+              <div className="mt-3 h-6 w-4/5 animate-pulse rounded-full bg-sky-100" />
+              <div className="mt-7 h-32 animate-pulse rounded-[28px] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.06)]" />
+            </div>
+
+            <div className="h-[360px] animate-pulse rounded-[34px] bg-slate-100 sm:h-[460px] lg:h-[560px]" />
+          </div>
+        </div>
+      </main>
+
+      <Footer logoSrc={logoSrc} />
+    </>
+  );
+}
+
+function ServicioNotFound({
+  logoSrc,
+  title = 'No encontramos el servicio solicitado',
+  detail
+}) {
+  return (
+    <>
+      <Navbar logoSrc={logoSrc} />
+
+      <main className="min-h-screen bg-white px-5 py-32 text-center">
+        <div className="mx-auto max-w-xl rounded-[32px] border border-sky-100 bg-white p-8 shadow-[0_26px_80px_rgba(15,23,42,0.08)]">
+          <p className="cuerpo text-[0.75rem] font-bold uppercase tracking-[0.22em] text-[var(--color-primary)]">
+            Servicio no encontrado
+          </p>
+
+          <h1 className="titulo mt-3 text-3xl text-slate-950">{title}</h1>
+
+          <p className="cuerpo mt-4 text-slate-600">
+            {detail ||
+              'Podés volver al inicio y consultar los servicios disponibles de VALMAT.'}
+          </p>
+
+          <Link
+            to="/"
+            className="cuerpo mt-6 inline-flex items-center justify-center rounded-full bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(25,211,223,0.22)]"
+          >
+            Volver al inicio
+          </Link>
+        </div>
+      </main>
+
+      <Footer logoSrc={logoSrc} />
+    </>
+  );
+}
+
 const ServicioDetalle = ({ logoSrc }) => {
   const navigate = useNavigate();
   const { slug } = useParams();
-  const service = getServiceBySlug(slug);
 
-  if (!service) {
+  const [service, setService] = useState(null);
+  const [allServices, setAllServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const hasContentBlocks = useMemo(() => {
+    if (!service) return false;
+
     return (
-      <>
-        <Navbar logoSrc={logoSrc} />
-
-        <main className="min-h-screen bg-white px-5 py-32 text-center">
-          <div className="mx-auto max-w-xl rounded-[32px] border border-sky-100 bg-white p-8 shadow-[0_26px_80px_rgba(15,23,42,0.08)]">
-            <p className="cuerpo text-[0.75rem] font-bold uppercase tracking-[0.22em] text-[var(--color-primary)]">
-              Servicio no encontrado
-            </p>
-
-            <h1 className="titulo mt-3 text-3xl text-slate-950">
-              No encontramos el servicio solicitado
-            </h1>
-
-            <p className="cuerpo mt-4 text-slate-600">
-              Podés volver al inicio y consultar los servicios disponibles de
-              VALMAT.
-            </p>
-
-            <Link
-              to="/"
-              className="cuerpo mt-6 inline-flex items-center justify-center rounded-full bg-[var(--color-primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(25,211,223,0.22)]"
-            >
-              Volver al inicio
-            </Link>
-          </div>
-        </main>
-
-        <Footer logoSrc={logoSrc} />
-      </>
+      service.painPoints.length > 0 ||
+      service.features.length > 0 ||
+      service.benefits.length > 0 ||
+      service.process.length > 0 ||
+      service.useCases.length > 0 ||
+      service.faq.length > 0
     );
+  }, [service]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadService = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const [serviceData, servicesData] = await Promise.allSettled([
+          fetchServicioBySlug(slug),
+          fetchServiciosPublicos()
+        ]);
+
+        if (!isMounted) return;
+
+        if (serviceData.status === 'rejected') {
+          throw serviceData.reason;
+        }
+
+        setService(serviceData.value);
+
+        if (servicesData.status === 'fulfilled') {
+          setAllServices(servicesData.value);
+        } else {
+          setAllServices([]);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+
+        setService(null);
+        setAllServices([]);
+        setError(err.message || 'No se pudo cargar el servicio solicitado.');
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadService();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (loading) {
+    return <ServicioDetalleLoading logoSrc={logoSrc} />;
   }
 
-  const Icon = service.icon;
+  if (error || !service) {
+    return <ServicioNotFound logoSrc={logoSrc} detail={error} />;
+  }
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -509,7 +898,6 @@ const ServicioDetalle = ({ logoSrc }) => {
 
             <div className="mt-8 grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
               <motion.div variants={fadeUp}>
-
                 <h1 className="titulo mt-6 text-2xl uppercase leading-[0.98] tracking-[-0.055em] text-slate-950 sm:text-3xl lg:text-4xl">
                   {service.detailTitle}
                 </h1>
@@ -518,17 +906,19 @@ const ServicioDetalle = ({ logoSrc }) => {
                   {service.detailIntro}
                 </p>
 
-                <div className="mt-7 rounded-[28px] border border-white/80 bg-white/80 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.07)] backdrop-blur-xl">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-[0_14px_30px_rgba(25,211,223,0.24)]">
-                      <HiSparkles className="text-[1.1rem]" />
-                    </div>
+                {service.salesText && (
+                  <div className="mt-7 rounded-[28px] border border-white/80 bg-white/80 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.07)] backdrop-blur-xl">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-white shadow-[0_14px_30px_rgba(25,211,223,0.24)]">
+                        <HiSparkles className="text-[1.1rem]" />
+                      </div>
 
-                    <p className="cuerpo text-[0.98rem] font-medium leading-7 text-slate-700">
-                      {service.salesText}
-                    </p>
+                      <p className="cuerpo text-[0.98rem] font-medium leading-7 text-slate-700">
+                        {service.salesText}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <TrustBar />
 
@@ -557,53 +947,55 @@ const ServicioDetalle = ({ logoSrc }) => {
           </motion.div>
         </section>
 
-        <section className="relative bg-white px-5 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-          <motion.div
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.16 }}
-            className="mx-auto max-w-7xl"
-          >
-            <div className="grid gap-5 lg:grid-cols-3">
-              <InfoCard
-                title="Problemas que resuelve"
-                items={service.painPoints}
-                icon={HiClock}
-              />
+        {hasContentBlocks && (
+          <section className="relative bg-white px-5 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+            <motion.div
+              variants={container}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.16 }}
+              className="mx-auto max-w-7xl"
+            >
+              <div className="grid gap-5 lg:grid-cols-3">
+                <InfoCard
+                  title="Problemas que resuelve"
+                  items={service.painPoints}
+                  icon={HiClock}
+                />
 
-              <InfoCard
-                title="Qué incluye"
-                items={service.features}
-                icon={HiCheckBadge}
-              />
+                <InfoCard
+                  title="Qué incluye"
+                  items={service.features}
+                  icon={HiCheckBadge}
+                />
 
-              <InfoCard
-                title="Beneficios"
-                items={service.benefits}
-                icon={HiShieldCheck}
-              />
-            </div>
+                <InfoCard
+                  title="Beneficios"
+                  items={service.benefits}
+                  icon={HiShieldCheck}
+                />
+              </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.78fr]">
-              <ProcessTimeline steps={service.process} />
+              <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.78fr]">
+                <ProcessTimeline steps={service.process} />
 
-              <InfoCard
-                title="Ideal para"
-                items={service.useCases}
-                icon={HiSparkles}
-              />
-            </div>
+                <InfoCard
+                  title="Ideal para"
+                  items={service.useCases}
+                  icon={HiSparkles}
+                />
+              </div>
 
-            <div className="mt-6">
-              <FAQBlock faq={service.faq} />
-            </div>
-          </motion.div>
-        </section>
+              <div className="mt-6">
+                <FAQBlock faq={service.faq} />
+              </div>
+            </motion.div>
+          </section>
+        )}
 
         <ConversionBand service={service} />
 
-        <OtherServices currentSlug={service.slug} />
+        <OtherServices currentSlug={service.slug} services={allServices} />
 
         <section
           id="contacto-servicio"

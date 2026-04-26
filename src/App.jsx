@@ -17,8 +17,10 @@ import ProtectedRoute from './Auth/ProtectedRoute';
 
 import SucursalesAdmin from './pages/Gets/Core/SucursalesAdmin';
 import UsuariosAdmin from './pages/Gets/Core/UsuariosAdmin';
-import Footer from './components/Footer';
+import ServiciosAdmin from './pages/Dashboard/Servicios/ServiciosAdmin';
+import ServiciosTiposClientesAdmin from './pages/Dashboard/Servicios/ServiciosTiposClientesAdmin';
 
+import Footer from './components/Footer';
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
@@ -91,6 +93,24 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/dashboard/servicios"
+          element={
+            <ProtectedRoute>
+              <ServiciosAdmin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/servicios/tipos-clientes"
+          element={
+            <ProtectedRoute>
+              <ServiciosTiposClientesAdmin />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<NotFound logoSrc={logoValmat} />} />
       </Routes>
       <Footer logoSrc={logoValmat} />
