@@ -1,7 +1,8 @@
 // Benjamin Orellana - 25/04/2026 - Dashboard administrativo inicial premium para VALMAT usando datos reales del AuthContext.
+// Benjamin Orellana - 25/04/2026 - Rediseño UX del dashboard: layout claro, sidebar con íconos, sin bloque de último acceso ni próximo paso.
 
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../Auth/AuthContext';
 
 const PanelIcon = ({ className = '' }) => (
@@ -114,24 +115,117 @@ const UserIcon = ({ className = '' }) => (
   </svg>
 );
 
-const CalendarIcon = ({ className = '' }) => (
+const HomeIcon = ({ className = '' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path
-      d="M7.5 3.5v3M16.5 3.5v3"
+      d="M4.75 10.75 12 4.5l7.25 6.25"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6.25 10.25v8A1.75 1.75 0 0 0 8 20h8a1.75 1.75 0 0 0 1.75-1.75v-8"
       stroke="currentColor"
       strokeWidth="1.7"
       strokeLinecap="round"
     />
     <path
-      d="M5.75 5h12.5A1.75 1.75 0 0 1 20 6.75v11.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V6.75A1.75 1.75 0 0 1 5.75 5Z"
+      d="M10 20v-5.25h4V20"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const SpacesIcon = ({ className = '' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M5 5.75A1.75 1.75 0 0 1 6.75 4h3.5A1.75 1.75 0 0 1 12 5.75v3.5A1.75 1.75 0 0 1 10.25 11h-3.5A1.75 1.75 0 0 1 5 9.25v-3.5Z"
       stroke="currentColor"
       strokeWidth="1.7"
     />
     <path
-      d="M4.5 9h15"
+      d="M12 14.75A1.75 1.75 0 0 1 13.75 13h3.5A1.75 1.75 0 0 1 19 14.75v3.5A1.75 1.75 0 0 1 17.25 20h-3.5A1.75 1.75 0 0 1 12 18.25v-3.5Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    />
+    <path
+      d="M14 4h4v4M18 4l-5.25 5.25M10 20H6v-4M6 20l5.25-5.25"
       stroke="currentColor"
       strokeWidth="1.7"
       strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ServiceIcon = ({ className = '' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M14.5 5.5 18.5 9.5M4.75 19.25l4.75-1 8.75-8.75a2.12 2.12 0 0 0-3-3L6.5 15.25l-1.75 4Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M13.25 7.5 16.5 10.75"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const CertificateIcon = ({ className = '' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M7.75 4h8.5A1.75 1.75 0 0 1 18 5.75v12.5A1.75 1.75 0 0 1 16.25 20h-8.5A1.75 1.75 0 0 1 6 18.25V5.75A1.75 1.75 0 0 1 7.75 4Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    />
+    <path
+      d="M9 8h6M9 11.5h6M9 15h3.5"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const ReportIcon = ({ className = '' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M5 19V5M5 19h14"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+    <path
+      d="M8.25 16v-4.5M12 16V8M15.75 16v-6"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const SettingsIcon = ({ className = '' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M12 14.75A2.75 2.75 0 1 0 12 9.25a2.75 2.75 0 0 0 0 5.5Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    />
+    <path
+      d="M18.4 13.35c.06-.44.06-.88 0-1.32l1.35-1.05-1.5-2.6-1.6.65a7.08 7.08 0 0 0-1.15-.66L15.25 6.7h-3l-.25 1.67c-.4.16-.79.38-1.15.66l-1.6-.65-1.5 2.6 1.35 1.05c-.06.44-.06.88 0 1.32L7.75 14.4l1.5 2.6 1.6-.65c.36.28.75.5 1.15.66l.25 1.67h3l.25-1.67c.4-.16.79-.38 1.15-.66l1.6.65 1.5-2.6-1.35-1.05Z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 );
@@ -174,13 +268,14 @@ const getInitials = (name = '') => {
 };
 
 const ModuleGlyph = ({ label }) => (
-  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-sm font-black text-slate-900 shadow-sm">
+  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-cyan-100 bg-cyan-50 text-sm font-black text-cyan-800 shadow-sm">
     {label}
   </div>
 );
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = useAuth();
 
   const {
@@ -245,7 +340,6 @@ export default function Dashboard() {
       label: 'SU',
       route: '/dashboard/sucursales'
     },
-
     {
       title: 'Servicios',
       description:
@@ -284,12 +378,43 @@ export default function Dashboard() {
     }
   ];
 
+  // Benjamin Orellana - 25/04/2026 - Sidebar con íconos visuales para mejorar lectura y navegación.
   const sidebarItems = [
-    'Resumen',
-    'Operación',
-    'Clientes',
-    'Servicios',
-    'Administración'
+    {
+      title: 'Inicio',
+      route: '/dashboard',
+      icon: HomeIcon
+    },
+    {
+      title: 'Espacios',
+      route: '/dashboard/sucursales',
+      icon: SpacesIcon
+    },
+    {
+      title: 'Servicios',
+      route: '/dashboard/servicios',
+      icon: ServiceIcon
+    },
+    {
+      title: 'Certificados',
+      route: '',
+      icon: CertificateIcon
+    },
+    {
+      title: 'Reportes',
+      route: '',
+      icon: ReportIcon
+    },
+    {
+      title: 'Usuarios',
+      route: '/dashboard/usuarios',
+      icon: UserIcon
+    },
+    {
+      title: 'Configuración',
+      route: '',
+      icon: SettingsIcon
+    }
   ];
 
   const handleLogout = () => {
@@ -307,10 +432,27 @@ export default function Dashboard() {
     }
   };
 
+  const handleSidebarNavigate = (item) => {
+    if (!item.route) return;
+
+    navigate(item.route);
+    setSidebarOpen(false);
+  };
+
+  const isSidebarItemActive = (item) => {
+    if (!item.route) return false;
+
+    if (item.route === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+
+    return location.pathname.startsWith(item.route);
+  };
+
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/20">
+        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-600 text-white shadow-lg shadow-cyan-600/20">
           <span className="text-base font-black tracking-tight">V</span>
         </div>
 
@@ -324,7 +466,7 @@ export default function Dashboard() {
 
       <div className="mx-5 mb-5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-50 text-sm font-black text-slate-950">
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-50 text-sm font-black text-cyan-800">
             {getInitials(fullName)}
           </div>
 
@@ -340,22 +482,39 @@ export default function Dashboard() {
       </div>
 
       <nav className="flex-1 space-y-1 px-4">
-        {sidebarItems.map((item, index) => (
-          <button
-            key={item}
-            type="button"
-            className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-              index === 0
-                ? 'bg-slate-950 text-white shadow-lg shadow-slate-950/15'
-                : 'text-slate-600 hover:bg-white hover:text-slate-950 hover:shadow-sm'
-            }`}
-          >
-            <span>{item}</span>
-            {index === 0 && (
-              <span className="h-2 w-2 rounded-full bg-cyan-200" />
-            )}
-          </button>
-        ))}
+        {sidebarItems.map((item) => {
+          const Icon = item.icon;
+          const active = isSidebarItemActive(item);
+
+          return (
+            <button
+              key={item.title}
+              type="button"
+              onClick={() => handleSidebarNavigate(item)}
+              disabled={!item.route}
+              className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                active
+                  ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/15'
+                  : item.route
+                    ? 'text-slate-600 hover:bg-white hover:text-slate-950 hover:shadow-sm'
+                    : 'cursor-not-allowed text-slate-400 opacity-70'
+              }`}
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <Icon
+                  className={`h-4 w-4 shrink-0 ${
+                    active ? 'text-white' : 'text-slate-400'
+                  }`}
+                />
+                <span className="truncate">{item.title}</span>
+              </span>
+
+              {active && (
+                <span className="h-2 w-2 shrink-0 rounded-full bg-cyan-100" />
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="p-4">
@@ -373,7 +532,7 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#eef6fb] text-slate-950">
-      <div className="fixed inset-y-0 left-0 z-40 hidden w-[286px] border-r border-slate-200/80 bg-slate-50/85 backdrop-blur-xl lg:block">
+      <div className="fixed inset-y-0 left-0 z-40 hidden w-[286px] border-r border-slate-200/80 bg-slate-50/90 backdrop-blur-xl lg:block">
         <SidebarContent />
       </div>
 
@@ -444,7 +603,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex h-11 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-bold text-white shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                className="flex h-11 items-center gap-2 rounded-2xl bg-cyan-600 px-4 text-sm font-bold text-white shadow-lg shadow-cyan-600/15 transition hover:-translate-y-0.5 hover:bg-cyan-700"
               >
                 <LogoutIcon className="h-4 w-4" />
                 Salir
@@ -454,67 +613,54 @@ export default function Dashboard() {
         </header>
 
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-          <section className="relative overflow-hidden rounded-[34px] border border-white/80 bg-slate-950 p-5 text-white shadow-[0_24px_80px_rgba(15,23,42,.18)] sm:p-7 lg:p-8">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(103,232,249,.24),transparent_30%),radial-gradient(circle_at_82%_10%,rgba(59,130,246,.20),transparent_26%),linear-gradient(135deg,#020617_0%,#0f172a_54%,#082f49_100%)]" />
-            <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,.9)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.9)_1px,transparent_1px)] [background-size:42px_42px]" />
+          <section className="relative overflow-hidden rounded-[34px] border border-white bg-white/90 p-5 shadow-[0_24px_80px_rgba(15,23,42,.08)] backdrop-blur-xl sm:p-7 lg:p-8">
+            <div className="relative">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-cyan-700">
+                    <PanelIcon className="h-3.5 w-3.5" />
+                    Panel central
+                  </div>
 
-            <div className="relative grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-              <div>
-                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-100/15 bg-white/10 px-4 py-2 text-xs font-semibold text-cyan-50 backdrop-blur-xl">
-                  <span className="h-2 w-2 rounded-full bg-cyan-200 shadow-[0_0_16px_rgba(103,232,249,.85)]" />
-                  Workspace operativo
+                  <h2 className="mt-5 text-3xl font-black tracking-[-0.055em] text-slate-950 sm:text-5xl">
+                    Bienvenido, {fullName}
+                  </h2>
+
+                  <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                    Gestión administrativa, comercial y operativa de VALMAT en
+                    un entorno claro, rápido y preparado para escalar.
+                  </p>
                 </div>
 
-                <h2 className="text-3xl font-semibold tracking-[-0.055em] sm:text-5xl">
-                  Bienvenido, {fullName}
-                </h2>
-
-                <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Panel inicial para organizar la gestión administrativa,
-                  comercial y operativa de VALMAT.
-                </p>
-
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-cyan-50">
-                    {formatRole(userData.rolGlobal)}
-                  </span>
-
-                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-cyan-50">
-                    Estado: {userData.estado}
-                  </span>
-
-                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-cyan-50">
-                    {activeBranch?.nombre || 'Sin sucursal activa'}
-                  </span>
+                <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+                  <InfoPill
+                    label="Rol"
+                    value={formatRole(userData.rolGlobal)}
+                  />
+                  <InfoPill label="Estado" value={userData.estado} />
+                  <InfoPill
+                    label="Sucursal"
+                    value={activeBranch?.nombre || 'Sin sucursal'}
+                  />
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.08] p-4 backdrop-blur-xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/80">
-                  Último acceso
-                </p>
-
-                <p className="mt-2 text-xl font-black text-white">
-                  {formatDateTime(userData.ultimoLogin)}
-                </p>
-
-                <div className="mt-4 grid gap-3 text-sm text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <UserIcon className="h-4 w-4 text-cyan-100" />
-                    <span className="truncate">{userData.email}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <PanelIcon className="h-4 w-4 text-cyan-100" />
-                    <span>{userData.telefono}</span>
-                  </div>
-                </div>
+              <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                  Último acceso: {formatDateTime(userData.ultimoLogin)}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                  {userData.email}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5">
+                  {userData.telefono}
+                </span>
               </div>
             </div>
           </section>
 
-          <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_370px]">
-            <div className="rounded-[32px] border border-white bg-white/85 p-4 shadow-sm backdrop-blur-xl sm:p-5">
+          <section className="mt-5">
+            <div className="rounded-[32px] border border-white bg-white/90 p-4 shadow-sm backdrop-blur-xl sm:p-5">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700">
@@ -524,14 +670,9 @@ export default function Dashboard() {
                     Centro operativo
                   </h3>
                 </div>
-
-                <p className="max-w-md text-sm text-slate-500">
-                  Estructura preparada para crecer con el sistema
-                  administrativo.
-                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {modules.map((module) => (
                   <button
                     key={module.title}
@@ -576,8 +717,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <aside className="space-y-5">
-              <article className="rounded-[32px] border border-white bg-white/85 p-5 shadow-sm backdrop-blur-xl">
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
+              <article className="rounded-[32px] border border-white bg-white/90 p-5 shadow-sm backdrop-blur-xl">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700">
@@ -588,12 +729,12 @@ export default function Dashboard() {
                     </h3>
                   </div>
 
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-950 text-sm font-black text-white">
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-50 text-sm font-black text-cyan-800">
                     {getInitials(fullName)}
                   </div>
                 </div>
 
-                <div className="mt-5 space-y-3">
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   {[
                     { label: 'Nombre completo', value: fullName },
                     {
@@ -602,7 +743,11 @@ export default function Dashboard() {
                     },
                     { label: 'Email', value: userData.email },
                     { label: 'Teléfono', value: userData.telefono },
-                    { label: 'Estado', value: userData.estado }
+                    { label: 'Estado', value: userData.estado },
+                    {
+                      label: 'Último acceso',
+                      value: formatDateTime(userData.ultimoLogin)
+                    }
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -619,7 +764,7 @@ export default function Dashboard() {
                 </div>
               </article>
 
-              <article className="rounded-[32px] border border-white bg-white/85 p-5 shadow-sm backdrop-blur-xl">
+              <article className="rounded-[32px] border border-white bg-white/90 p-5 shadow-sm backdrop-blur-xl">
                 <div className="flex items-center gap-3">
                   <div className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-50 text-cyan-700">
                     <BuildingIcon className="h-5 w-5" />
@@ -694,32 +839,21 @@ export default function Dashboard() {
                   )}
                 </div>
               </article>
-
-              <article className="rounded-[32px] border border-white bg-slate-950 p-5 text-white shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-cyan-100">
-                    <CalendarIcon className="h-5 w-5" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-100/80">
-                      Próximo paso
-                    </p>
-                    <h3 className="text-lg font-black tracking-[-0.035em]">
-                      Activar módulos operativos
-                    </h3>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm leading-6 text-slate-300">
-                  El layout ya queda preparado para conectar usuarios, clientes,
-                  solicitudes web, órdenes de servicio y agenda.
-                </p>
-              </article>
-            </aside>
+            </div>
           </section>
         </div>
       </section>
     </main>
+  );
+}
+
+function InfoPill({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-black text-slate-950">{value}</p>
+    </div>
   );
 }
