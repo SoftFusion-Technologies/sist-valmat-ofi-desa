@@ -1,7 +1,7 @@
 // Benjamin Orellana - 2026/04/24 - Sección de servicios 2.0 con navegación a páginas individuales, foco mobile, video expandible y mayor orientación comercial.
 // Benjamin Orellana - 25/04/2026 - Se migra la sección a servicios públicos dinámicos y se agrega filtro por tipo de cliente.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -481,50 +481,10 @@ function ClientTypeFilter({ activeType, onChange, loading, tiposCliente }) {
     </motion.div>
   );
 }
-// Benjamin Orellana - 2026/04/24 - Selector mobile con opción "Todos" para mostrar todos los servicios o filtrar una sola card.
-function ServiceQuickSelector({ services, selectedSlug, onSelect }) {
-  return (
-    <div className="mt-8 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-      <button
-        type="button"
-        onClick={() => onSelect(null)}
-        className={`cuerpo flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[0.78rem] font-bold transition-all duration-300 ${
-          !selectedSlug
-            ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-[0_14px_30px_rgba(25,211,223,0.22)]'
-            : 'border-sky-100 bg-white/82 text-slate-600 shadow-[0_8px_18px_rgba(15,23,42,0.04)]'
-        }`}
-      >
-        Todos
-      </button>
 
-      {services.map((service) => {
-        const active = selectedSlug === service.slug;
-        const Icon = service.icon || HiSparkles;
-
-        return (
-          <button
-            key={service.id || service.slug}
-            type="button"
-            onClick={() => onSelect(service.slug)}
-            className={`cuerpo flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[0.78rem] font-bold transition-all duration-300 ${
-              active
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-[0_14px_30px_rgba(25,211,223,0.22)]'
-                : 'border-sky-100 bg-white/82 text-slate-600 shadow-[0_8px_18px_rgba(15,23,42,0.04)]'
-            }`}
-          >
-            <Icon className="text-[0.95rem]" />
-            {service.shortTitle}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function ServiceCard({ service, index, onExpand, selectedSlug }) {
+function ServiceCard({ service, index, onExpand }) {
   const navigate = useNavigate();
   const Icon = service.icon || HiSparkles;
-  const isHighlighted = selectedSlug === service.slug;
 
   const goToDetail = () => {
     navigate(`/servicios/${service.slug}`);
@@ -561,11 +521,7 @@ function ServiceCard({ service, index, onExpand, selectedSlug }) {
         delay: index * 0.05,
         ease: [0.22, 1, 0.36, 1]
       }}
-      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[36px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(226,247,252,0.82)_100%)] p-3 shadow-[0_26px_80px_rgba(15,23,42,0.08)] outline-none backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:border-cyan-200/90 hover:shadow-[0_34px_90px_rgba(15,23,42,0.12)] focus-visible:ring-4 focus-visible:ring-cyan-200/70 sm:p-4 ${
-        isHighlighted
-          ? 'border-[var(--color-primary)]/60 ring-4 ring-cyan-100/70'
-          : 'border-sky-100/90'
-      }`}
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[36px] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(226,247,252,0.82)_100%)] p-3 shadow-[0_26px_80px_rgba(15,23,42,0.08)] outline-none backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:border-cyan-200/90 hover:shadow-[0_34px_90px_rgba(15,23,42,0.12)] focus-visible:ring-4 focus-visible:ring-cyan-200/70 sm:p-4"
     >
       <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
         <div className="absolute right-[-18%] top-[-18%] h-[240px] w-[240px] rounded-full bg-[radial-gradient(circle,rgba(25,211,223,0.20)_0%,rgba(25,211,223,0)_70%)] blur-2xl" />
@@ -716,35 +672,32 @@ function Servicios() {
   const [activeType, setActiveType] = useState('');
   const [loadingTipos, setLoadingTipos] = useState(true);
 
-  // Benjamin Orellana - 2026/04/24 - En mobile inicia sin servicio seleccionado para mostrar las 3 cards.
-  const [selectedSlug, setSelectedSlug] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [softLoading, setSoftLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Benjamin Orellana - 25/04/2026 - Carga perfiles activos para armar filtros públicos dinámicos.
-const loadTiposCliente = async () => {
-  try {
-    setLoadingTipos(true);
+  const loadTiposCliente = async () => {
+    try {
+      setLoadingTipos(true);
 
-    const data = await fetchTiposClientesPublicos();
+      const data = await fetchTiposClientesPublicos();
 
-    setTiposCliente(data);
+      setTiposCliente(data);
 
-    setActiveType((currentType) => {
-      if (!currentType) return '';
+      setActiveType((currentType) => {
+        if (!currentType) return '';
 
-      const exists = data.some((tipo) => tipo.codigo === currentType);
+        const exists = data.some((tipo) => tipo.codigo === currentType);
 
-      return exists ? currentType : '';
-    });
-  } catch (err) {
-    setTiposCliente([]);
-  } finally {
-    setLoadingTipos(false);
-  }
-};
+        return exists ? currentType : '';
+      });
+    } catch (err) {
+      setTiposCliente([]);
+    } finally {
+      setLoadingTipos(false);
+    }
+  };
 
   const loadServices = async (tipoClienteCodigo = '', mode = 'initial') => {
     try {
@@ -759,17 +712,8 @@ const loadTiposCliente = async () => {
       const data = await fetchServiciosPublicos(tipoClienteCodigo);
 
       setServices(data);
-
-      setSelectedSlug((currentSlug) => {
-        if (!currentSlug) return null;
-
-        const exists = data.some((service) => service.slug === currentSlug);
-
-        return exists ? currentSlug : null;
-      });
     } catch (err) {
       setServices([]);
-      setSelectedSlug(null);
       setError(err.message || 'No se pudieron cargar los servicios.');
     } finally {
       setLoading(false);
@@ -777,28 +721,15 @@ const loadTiposCliente = async () => {
     }
   };
 
-useEffect(() => {
-  loadTiposCliente();
-  loadServices('', 'initial');
-}, []);
+  useEffect(() => {
+    loadTiposCliente();
+    loadServices('', 'initial');
+  }, []);
 
   const handleTypeChange = (tipoClienteCodigo) => {
     setActiveType(tipoClienteCodigo);
     loadServices(tipoClienteCodigo, 'soft');
   };
-
-  const selectedService = useMemo(() => {
-    if (!selectedSlug) return null;
-
-    return services.find((service) => service.slug === selectedSlug) || null;
-  }, [services, selectedSlug]);
-
-  // Benjamin Orellana - 2026/04/24 - En mobile, si hay servicio seleccionado, se muestra solo esa card; si no, se muestran todos.
-  const visibleMobileServices = useMemo(() => {
-    if (!selectedSlug) return services;
-
-    return services.filter((service) => service.slug === selectedSlug);
-  }, [services, selectedSlug]);
 
   return (
     <section
@@ -858,6 +789,7 @@ useEffect(() => {
             loading={softLoading || loading || loadingTipos}
             tiposCliente={tiposCliente}
           />
+
           {softLoading && (
             <motion.p
               variants={fadeUp}
@@ -879,44 +811,10 @@ useEffect(() => {
           <ServiciosEmpty />
         ) : (
           <>
-            <ServiceQuickSelector
-              services={services}
-              selectedSlug={selectedSlug}
-              onSelect={setSelectedSlug}
-            />
-
-            <div className="mt-6 rounded-[30px] border border-cyan-100 bg-white/74 p-4 shadow-[0_18px_52px_rgba(15,23,42,0.05)] backdrop-blur-xl lg:hidden">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/12 text-[var(--color-primary)]">
-                  <HiSparkles className="text-[1.1rem]" />
-                </span>
-
-                <div>
-                  <p className="cuerpo text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-400">
-                    {selectedService
-                      ? 'Servicio seleccionado'
-                      : 'Vista general'}
-                  </p>
-
-                  <h3 className="titulo mt-1 text-xl text-slate-950">
-                    {selectedService
-                      ? selectedService.title
-                      : 'Todos los servicios'}
-                  </h3>
-
-                  <p className="cuerpo mt-2 text-[0.9rem] leading-6 text-slate-600">
-                    {selectedService
-                      ? selectedService.intent
-                      : 'Elegí un servicio para ver solo esa opción o mantené esta vista para comparar las alternativas disponibles.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Benjamin Orellana - 2026/04/24 - Grilla mobile filtrable: muestra todos o solo el servicio seleccionado. */}
+            {/* Benjamin Orellana - 2026/04/27 - Se elimina ServiceQuickSelector y mobile muestra todos los servicios disponibles sin selector intermedio. */}
             <div className="mt-7 grid gap-5 lg:hidden">
               <AnimatePresence mode="popLayout">
-                {visibleMobileServices.map((service, index) => (
+                {services.map((service, index) => (
                   <motion.div
                     key={service.slug}
                     layout
@@ -932,7 +830,6 @@ useEffect(() => {
                       service={service}
                       index={index}
                       onExpand={setExpandedService}
-                      selectedSlug={selectedSlug}
                     />
                   </motion.div>
                 ))}
@@ -947,7 +844,6 @@ useEffect(() => {
                   service={service}
                   index={index}
                   onExpand={setExpandedService}
-                  selectedSlug={selectedSlug}
                 />
               ))}
             </div>

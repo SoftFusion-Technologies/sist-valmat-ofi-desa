@@ -19,8 +19,10 @@ import {
   ShieldCheck,
   Trash2,
   Users,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../../Auth/AuthContext';
 
@@ -184,6 +186,7 @@ const tiposClientesApi = {
 };
 
 export default function ServiciosTiposClientesAdmin() {
+  const navigate = useNavigate();
   const { authToken } = useAuth();
 
   const [tiposClientes, setTiposClientes] = useState([]);
@@ -337,129 +340,157 @@ export default function ServiciosTiposClientesAdmin() {
   };
 
   return (
-    <section className="min-h-screen bg-[#f5f8fb] px-3 py-4 text-slate-950 sm:px-5 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.20),transparent_32%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.10),transparent_34%)]" />
+    <main className="min-h-screen bg-[#eef6fb] text-slate-950 cuerpo">
+      <section className="relative overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,.20),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(90,151,208,.16),transparent_32%)]" />
+        <div className="absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(217,226,232,.70)_1px,transparent_1px),linear-gradient(90deg,rgba(217,226,232,.70)_1px,transparent_1px)] [background-size:54px_54px]" />
+        <div className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 bottom-20 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
 
-          <div className="relative p-4 sm:p-6 lg:p-8">
-            <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">
-                  <Users className="h-3.5 w-3.5" />
-                  VALMAT Servicios
+        <div className="relative z-10 mx-auto">
+          <header className="mb-5 overflow-hidden rounded-[34px] border border-white bg-white/85 shadow-[0_22px_70px_rgba(15,23,42,.08)] backdrop-blur-xl">
+            <div className="relative p-5 sm:p-6 lg:p-7">
+              <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(25,211,223,.16),transparent_42%)]" />
+
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-4">
+                  {/* Benjamin Orellana - 27/04/2026 - Botón de regreso hacia Servicios para mantener navegación clara desde Tipos de clientes. */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard/servicios')}
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-x-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                    aria-label="Volver a servicios"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-[var(--color-primary)]">
+                      <Users className="h-3.5 w-3.5" />
+                      VALMAT Servicios
+                    </div>
+
+                    <h1 className="titulo mt-3 text-4xl uppercase leading-none tracking-[-0.055em] text-slate-950 sm:text-5xl lg:text-6xl">
+                      Tipos de clientes
+                    </h1>
+
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+                      Administrá los perfiles usados para segmentar servicios:
+                      particulares, empresas, obras y futuros perfiles.
+                    </p>
+                  </div>
                 </div>
 
-                <h1 className="mt-4 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">
-                  Tipos de clientes
-                </h1>
+                <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
+                  <button
+                    type="button"
+                    onClick={() => loadData('soft')}
+                    disabled={loading || softLoading || saving}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        'h-4 w-4',
+                        (loading || softLoading) && 'animate-spin'
+                      )}
+                    />
+                    Actualizar
+                  </button>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  Administrá los perfiles usados para segmentar servicios:
-                  particulares, empresas, obras y futuros perfiles.
-                </p>
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.28)] transition hover:-translate-y-0.5 hover:bg-[var(--color-secondary)]"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Nuevo perfil
+                  </button>
+                </div>
               </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => loadData('soft')}
-                  disabled={loading || softLoading || saving}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 disabled:opacity-60"
-                >
-                  <RefreshCw
-                    className={cn(
-                      'h-4 w-4',
-                      (loading || softLoading) && 'animate-spin'
-                    )}
-                  />
-                  Actualizar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-[0_18px_35px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5 hover:bg-cyan-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nuevo perfil
-                </button>
-              </div>
-            </header>
-
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <StatCard label="Total" value={stats.total} />
-              <StatCard label="Activos" value={stats.activos} tone="cyan" />
-              <StatCard
-                label="Inactivos"
-                value={stats.inactivos}
-                tone="slate"
-              />
             </div>
+          </header>
 
-            <TiposClienteFilters
-              filters={filters}
-              updateFilter={updateFilter}
-              onApply={applyFilters}
-              onClear={clearFilters}
-              loading={softLoading}
-            />
+          <div className="relative overflow-hidden rounded-[34px] border border-white/80 bg-white/85 p-4 shadow-[0_22px_70px_rgba(15,23,42,.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+            <div className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.08),transparent_34%)]" />
 
-            {error && (
-              <div className="mt-5 flex items-start gap-3 rounded-3xl border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-700">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-black">No se pudo cargar la información</p>
-                  <p className="mt-1 text-red-600">{error}</p>
-                </div>
+            <div className="relative">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <StatCard label="Total" value={stats.total} />
+                <StatCard label="Activos" value={stats.activos} tone="cyan" />
+                <StatCard
+                  label="Inactivos"
+                  value={stats.inactivos}
+                  tone="slate"
+                />
               </div>
-            )}
 
-            {loading ? (
-              <TiposClienteSkeleton />
-            ) : tiposClientes.length === 0 ? (
-              <EmptyState onCreate={openCreate} />
-            ) : (
-              <>
-                <TiposClienteTable
-                  tiposClientes={tiposClientes}
-                  onEdit={openEdit}
-                  onDelete={askDelete}
-                />
+              <TiposClienteFilters
+                filters={filters}
+                updateFilter={updateFilter}
+                onApply={applyFilters}
+                onClear={clearFilters}
+                loading={softLoading}
+              />
 
-                <TiposClienteCards
-                  tiposClientes={tiposClientes}
-                  onEdit={openEdit}
-                  onDelete={askDelete}
-                />
-              </>
-            )}
+              {error && (
+                <div className="mt-5 flex items-start gap-3 rounded-3xl border border-red-100 bg-red-50 px-4 py-4 text-sm text-red-700">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+
+                  <div>
+                    <p className="font-black">
+                      No se pudo cargar la información
+                    </p>
+                    <p className="mt-1 text-red-600">{error}</p>
+                  </div>
+                </div>
+              )}
+
+              {loading ? (
+                <TiposClienteSkeleton />
+              ) : tiposClientes.length === 0 ? (
+                <EmptyState onCreate={openCreate} />
+              ) : (
+                <>
+                  <TiposClienteTable
+                    tiposClientes={tiposClientes}
+                    onEdit={openEdit}
+                    onDelete={askDelete}
+                  />
+
+                  <TiposClienteCards
+                    tiposClientes={tiposClientes}
+                    onEdit={openEdit}
+                    onDelete={askDelete}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <AnimatePresence>
-        {modalState.open && (
-          <TipoClienteModal
-            item={modalState.item}
-            authToken={authToken}
-            onClose={closeModal}
-            onSaved={handleSaved}
-            showToast={showToast}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {modalState.open && (
+            <TipoClienteModal
+              item={modalState.item}
+              authToken={authToken}
+              onClose={closeModal}
+              onSaved={handleSaved}
+              showToast={showToast}
+            />
+          )}
+        </AnimatePresence>
 
-      <ConfirmDeleteModal
-        open={confirmState.open}
-        item={confirmState.item}
-        onClose={closeConfirm}
-        onConfirm={handleDelete}
-        loading={saving}
-      />
+        <ConfirmDeleteModal
+          open={confirmState.open}
+          item={confirmState.item}
+          onClose={closeConfirm}
+          onConfirm={handleDelete}
+          loading={saving}
+        />
 
-      <Toast toast={toast} />
-    </section>
+        <Toast toast={toast} />
+      </section>
+    </main>
   );
 }
 

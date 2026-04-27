@@ -21,9 +21,10 @@ import {
   Tags,
   Trash2,
   Video,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { serviciosAdminApi } from '../../../api/serviciosAdminApi';
 import { useAuth } from '../../../Auth/AuthContext';
 import ServicioMediaManager from './components/ServicioMediaManager';
@@ -169,6 +170,8 @@ const buildServicioPayload = (form) => ({
 });
 
 export default function ServiciosAdmin() {
+    const navigate = useNavigate();
+
   const { authToken } = useAuth();
 
   const [servicios, setServicios] = useState([]);
@@ -331,46 +334,66 @@ export default function ServiciosAdmin() {
     await loadData();
   };
 
-  return (
-    <section className="min-h-screen bg-[#f5f8fb] px-3 py-4 text-slate-950 sm:px-5 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.20),transparent_32%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.10),transparent_34%)]" />
+return (
+  <main className="min-h-screen bg-[#eef6fb] text-slate-950 cuerpo">
+    <section className="relative overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(25,211,223,.20),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(90,151,208,.16),transparent_32%)]" />
+      <div className="absolute inset-0 opacity-[0.32] [background-image:linear-gradient(rgba(217,226,232,.70)_1px,transparent_1px),linear-gradient(90deg,rgba(217,226,232,.70)_1px,transparent_1px)] [background-size:54px_54px]" />
+      <div className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-20 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl" />
 
-          <div className="relative p-4 sm:p-6 lg:p-8">
-            <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">
-                  <Settings2 className="h-3.5 w-3.5" />
-                  VALMAT Servicios
+      <div className="relative z-10 mx-auto">
+        <header className="mb-5 overflow-hidden rounded-[34px] border border-white bg-white/85 shadow-[0_22px_70px_rgba(15,23,42,.08)] backdrop-blur-xl">
+          <div className="relative p-5 sm:p-6 lg:p-7">
+            <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(25,211,223,.16),transparent_42%)]" />
+
+            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                {/* Benjamin Orellana - 27/04/2026 - Botón de regreso para mantener consistencia visual con el header administrativo moderno. */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-x-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  aria-label="Volver al dashboard"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-[var(--color-primary)]">
+                    <Settings2 className="h-3.5 w-3.5" />
+                    VALMAT Servicios
+                  </div>
+
+                  <h1 className="titulo mt-3 text-4xl uppercase leading-none tracking-[-0.055em] text-slate-950 sm:text-5xl lg:text-6xl">
+                    Servicios
+                  </h1>
+
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+                    Gestioná servicios, perfiles de clientes, contenido
+                    comercial, preguntas frecuentes y media pública desde un
+                    panel único.
+                  </p>
                 </div>
-
-                <h1 className="mt-4 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">
-                  Administración de servicios
-                </h1>
-
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  Gestioná servicios, perfiles de clientes, contenido comercial,
-                  preguntas frecuentes y media pública desde un panel único.
-                </p>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-3 sm:flex-row lg:items-center">
                 <button
                   type="button"
                   onClick={loadData}
                   disabled={loading || saving}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <RefreshCw
                     className={cn('h-4 w-4', loading && 'animate-spin')}
                   />
                   Actualizar
                 </button>
+
                 {/* Benjamin Orellana - 25/04/2026 - Acceso directo al administrador de perfiles/tipos de cliente desde Servicios. */}
                 <Link
                   to="/dashboard/servicios/tipos-clientes"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-100"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50 px-5 py-3 text-sm font-black text-[var(--color-primary)] shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-100"
                 >
                   <Tags className="h-4 w-4" />
                   Tipos de clientes
@@ -379,15 +402,21 @@ export default function ServiciosAdmin() {
                 <button
                   type="button"
                   onClick={handleOpenCreate}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-[0_18px_35px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5 hover:bg-cyan-700"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 text-sm font-black text-white shadow-[0_18px_36px_rgba(25,211,223,.28)] transition hover:-translate-y-0.5 hover:bg-[var(--color-secondary)]"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                   Nuevo servicio
                 </button>
               </div>
-            </header>
+            </div>
+          </div>
+        </header>
 
-            <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="relative overflow-hidden rounded-[34px] border border-white/80 bg-white/85 p-4 shadow-[0_22px_70px_rgba(15,23,42,.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+          <div className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.08),transparent_34%)]" />
+
+          <div className="relative">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard label="Total" value={stats.total} />
               <StatCard label="Activos" value={stats.activos} tone="cyan" />
               <StatCard
@@ -456,7 +485,8 @@ export default function ServiciosAdmin() {
 
       <Toast toast={toast} />
     </section>
-  );
+  </main>
+);
 }
 
 function StatCard({ label, value, tone = 'default' }) {
@@ -938,7 +968,7 @@ function PrincipalTab({ form, updateForm, onSave, saving, onGoToMedia }) {
       <div className="space-y-5">
         <FormSection
           title="Identidad pública"
-          description="Datos principales usados en cards, detalle y SEO visual."
+          description="Datos principales usados en cards, detalle."
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
@@ -947,7 +977,7 @@ function PrincipalTab({ form, updateForm, onSave, saving, onGoToMedia }) {
               onChange={(v) => updateForm('title', v)}
             />
             <Input
-              label="Slug"
+              label="Direccion (URL)"
               value={form.slug}
               onChange={(v) => updateForm('slug', v)}
             />
@@ -957,7 +987,7 @@ function PrincipalTab({ form, updateForm, onSave, saving, onGoToMedia }) {
               onChange={(v) => updateForm('shortTitle', v)}
             />
             <Input
-              label="Eyebrow"
+              label="Texto debajo del video"
               value={form.eyebrow}
               onChange={(v) => updateForm('eyebrow', v)}
             />
@@ -966,11 +996,11 @@ function PrincipalTab({ form, updateForm, onSave, saving, onGoToMedia }) {
               value={form.badge}
               onChange={(v) => updateForm('badge', v)}
             />
-            <Input
-              label="Icon key"
+            {/* <Input
+              label="Icono"
               value={form.iconKey}
               onChange={(v) => updateForm('iconKey', v)}
-            />
+            /> */}
           </div>
 
           <Textarea
