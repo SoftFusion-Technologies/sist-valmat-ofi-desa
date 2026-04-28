@@ -90,25 +90,6 @@ const fadeUp = {
   }
 };
 
-const tiposCliente = [
-  {
-    label: 'Todos',
-    value: ''
-  },
-  {
-    label: 'Particular',
-    value: 'PARTICULAR'
-  },
-  {
-    label: 'Empresa',
-    value: 'EMPRESA'
-  },
-  {
-    label: 'Obra',
-    value: 'OBRA'
-  }
-];
-
 const iconMap = {
   HiWrenchScrewdriver,
   HiShieldCheck,
