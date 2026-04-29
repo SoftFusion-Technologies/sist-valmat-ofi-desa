@@ -78,7 +78,7 @@ const emptyVarianteForm = {
   codigo: '',
   nombre: '',
   descripcion: '',
-  precio: '',
+  precio_base: '',
   duracion_min: '',
   orden_visual: 1,
   activo: 1
@@ -382,8 +382,8 @@ function CotizadorModal({
         <Field label="Precio referencia">
           <input
             type="number"
-            value={form.precio || ''}
-            onChange={(event) => onChange('precio', event.target.value)}
+            value={form.precio_base || ''}
+            onChange={(event) => onChange('precio_base', event.target.value)}
             placeholder="10000"
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-sky-500"
           />
@@ -889,10 +889,10 @@ function ServiciosCotizadorAdmin() {
     if (activeTab === 'variantes') {
       payload.cotizador_servicio_id = Number(payload.cotizador_servicio_id);
 
-      if (payload.precio === '') delete payload.precio;
+      if (payload.precio_base === '') delete payload.precio_base;
       if (payload.duracion_min === '') delete payload.duracion_min;
 
-      if (payload.precio !== undefined) payload.precio = Number(payload.precio);
+      if (payload.precio_base !== undefined) payload.precio_base = Number(payload.precio_base);
       if (payload.duracion_min !== undefined) {
         payload.duracion_min = Number(payload.duracion_min);
       }
@@ -1243,7 +1243,7 @@ function ServiciosCotizadorAdmin() {
                       getServicioNombre(servicios, row.cotizador_servicio_id)}
                   </td>
                   <td className="px-4 py-4 font-black text-slate-950">
-                    {formatMoney(row.precio)}
+                    {formatMoney(row.precio_base)}
                   </td>
                   <td className="px-4 py-4 font-bold text-slate-600">
                     {formatDuration(row.duracion_min)}
@@ -1533,36 +1533,10 @@ function ServiciosCotizadorAdmin() {
                 {filteredRows.length} registros visibles
               </p>
             </div>
-
-            <div className="hidden items-center gap-2 text-sm font-bold text-slate-400 sm:flex">
-              <HiSparkles />
-              Los precios complejos siguen definidos en backend.
-            </div>
           </div>
 
           {renderTable()}
         </motion.section>
-
-        <motion.div
-          variants={fadeUp}
-          className="mt-5 rounded-[28px] border border-amber-200 bg-amber-50 p-5"
-        >
-          <div className="flex items-start gap-3">
-            <HiDocumentText className="mt-1 shrink-0 text-[1.4rem] text-amber-700" />
-            <div>
-              <h3 className="font-black text-amber-950">
-                Importante sobre esta configuración
-              </h3>
-              <p className="mt-1 text-sm font-semibold leading-6 text-amber-800">
-                Este módulo administra el catálogo visible del cotizador. Las
-                reglas complejas de precios, promociones, mínimo operativo y
-                agenda todavía se calculan desde backend. No cambies códigos
-                como SILLON, SILLA, COLCHON o ALFOMBRA si ya están siendo usados
-                por el motor de cálculo.
-              </p>
-            </div>
-          </div>
-        </motion.div>
       </motion.section>
     </main>
   );
