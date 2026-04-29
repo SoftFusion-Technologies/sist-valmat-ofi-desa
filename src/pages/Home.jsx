@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar';
 import Hero from '../sections/Hero';
 import Servicios from '../sections/Servicios';
 import ServicesVideosShowcase from '../components/sections/ServicesVideosShowcase';
-import Footer from '../components/Footer';
 import Contacto from '../sections/Contacto';
 import Cobertura from '../sections/Cobertura';
 import ValmatProceso from '../components/ValmatProceso';

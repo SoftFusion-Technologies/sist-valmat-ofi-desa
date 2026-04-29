@@ -1,7 +1,8 @@
 // Benjamin Orellana - 2026/04/24 - Sección de servicios 2.0 con navegación a páginas individuales, foco mobile, video expandible y mayor orientación comercial.
 // Benjamin Orellana - 25/04/2026 - Se migra la sección a servicios públicos dinámicos y se agrega filtro por tipo de cliente.
+// Benjamin Orellana - 28/04/2026 - Se adapta la sección al nuevo enfoque comercial VALMAT: Hogar, Empresas y Final de obra.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -139,6 +140,130 @@ function normalizeTipoCliente(tipo = {}) {
   };
 }
 
+// Benjamin Orellana - 28/04/2026 - Normaliza slugs para reconocer los tres bloques principales del home.
+function normalizeSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replaceAll('_', '-')
+    .replace(/\s+/g, '-');
+}
+
+// Benjamin Orellana - 28/04/2026 - Detecta el bloque Hogar aunque venga como hogar, hogares o perfil PARTICULAR.
+function isHogarService(service = {}) {
+  const slug = normalizeSlug(service.slug);
+  const title = normalizeSlug(service.title || service.titulo);
+  const shortTitle = normalizeSlug(service.shortTitle || service.short_title);
+  const tipoCodigo = String(
+    service.tipo_cliente_codigo ||
+      service.tipoClienteCodigo ||
+      service.codigo_tipo_cliente ||
+      service.tipo_cliente?.codigo ||
+      ''
+  ).toUpperCase();
+
+  return (
+    slug === 'hogar' ||
+    slug === 'hogares' ||
+    title === 'hogar' ||
+    title === 'hogares' ||
+    shortTitle === 'hogar' ||
+    shortTitle === 'hogares' ||
+    tipoCodigo === 'PARTICULAR'
+  );
+}
+
+// Benjamin Orellana - 28/04/2026 - Resuelve la ruta pública final de cada bloque principal.
+function getServicePublicRoute(service = {}) {
+  if (isHogarService(service)) {
+    return '/servicios/hogar';
+  }
+
+  const slug = normalizeSlug(service.slug);
+
+  if (!slug) {
+    return '/#servicios';
+  }
+
+  return `/servicios/${slug}`;
+}
+
+// Benjamin Orellana - 28/04/2026 - Define CTA principal según el tipo de experiencia del bloque.
+function getPrimaryCtaLabel(service = {}) {
+  if (isHogarService(service)) {
+    return 'Cotizar ahora';
+  }
+
+  const slug = normalizeSlug(service.slug);
+  const tipoCodigo = String(
+    service.tipo_cliente_codigo ||
+      service.tipoClienteCodigo ||
+      service.codigo_tipo_cliente ||
+      service.tipo_cliente?.codigo ||
+      ''
+  ).toUpperCase();
+
+  if (slug === 'final-de-obra' || slug === 'obra' || tipoCodigo === 'OBRA') {
+    return 'Solicitar visita técnica';
+  }
+
+  if (slug === 'empresa' || slug === 'empresas' || tipoCodigo === 'EMPRESA') {
+    return 'Solicitar contacto';
+  }
+
+  return service.ctaLabel || service.cta_label || 'Consultar servicio';
+}
+
+// Benjamin Orellana - 28/04/2026 - Ordena servicios públicos manteniendo todos los activos del backend y priorizando Hogar.
+function getServiceWeight(service = {}) {
+  if (isHogarService(service)) return 1;
+
+  const slug = normalizeSlug(service.slug);
+  const title = normalizeSlug(service.title || service.titulo);
+  const shortTitle = normalizeSlug(service.shortTitle || service.short_title);
+  const tipoCodigo = String(
+    service.tipo_cliente_codigo ||
+      service.tipoClienteCodigo ||
+      service.codigo_tipo_cliente ||
+      service.tipo_cliente?.codigo ||
+      ''
+  ).toUpperCase();
+
+  if (
+    slug === 'tapizados' ||
+    title === 'tapizados' ||
+    shortTitle === 'tapizados'
+  ) {
+    return 2;
+  }
+
+  if (
+    slug === 'empresa' ||
+    slug === 'empresas' ||
+    title === 'empresa' ||
+    title === 'empresas' ||
+    shortTitle === 'empresa' ||
+    shortTitle === 'empresas' ||
+    tipoCodigo === 'EMPRESA'
+  ) {
+    return 3;
+  }
+
+  if (
+    slug === 'final-de-obra' ||
+    slug === 'obra' ||
+    title === 'final-de-obra' ||
+    title === 'obra' ||
+    shortTitle === 'obra' ||
+    shortTitle === 'final-de-obra' ||
+    tipoCodigo === 'OBRA'
+  ) {
+    return 4;
+  }
+
+  return Number(service.orden_visual || 99);
+}
+
 // Benjamin Orellana - 25/04/2026 - Obtiene tipos de clientes activos desde backend para no usar filtros estáticos.
 async function fetchTiposClientesPublicos() {
   const response = await fetch(
@@ -263,9 +388,17 @@ async function fetchServiciosPublicos(tipoClienteCodigo = '') {
       ? data
       : [];
 
-  return servicios
-    .map(normalizeService)
-    .sort((a, b) => Number(a.orden_visual || 0) - Number(b.orden_visual || 0));
+  const normalizedServices = servicios.map(normalizeService);
+
+  // Benjamin Orellana - 28/04/2026 - Se muestran todos los servicios activos del backend, manteniendo prioridad visual para Hogar.
+  return normalizedServices.sort((a, b) => {
+    const weightA = getServiceWeight(a);
+    const weightB = getServiceWeight(b);
+
+    if (weightA !== weightB) return weightA - weightB;
+
+    return Number(a.orden_visual || 0) - Number(b.orden_visual || 0);
+  });
 }
 
 function ExpandedServiceVideo({ service, onClose }) {
@@ -421,6 +554,7 @@ function ServiceMedia({ service, onExpand }) {
 
 // Benjamin Orellana - 25/04/2026 - Filtro público por tipo de cliente sin alterar la estética general de la sección.
 // Benjamin Orellana - 25/04/2026 - Filtro público por perfiles de cliente dinámicos desde servicios_tipos_clientes.
+// Benjamin Orellana - 28/04/2026 - Mantiene filtros dinámicos alineados a Hogar, Empresas y Final de obra.
 function ClientTypeFilter({ activeType, onChange, loading, tiposCliente }) {
   const filterOptions = [
     {
@@ -467,13 +601,22 @@ function ServiceCard({ service, index, onExpand }) {
   const navigate = useNavigate();
   const Icon = service.icon || HiSparkles;
 
+  const serviceRoute = useMemo(() => getServicePublicRoute(service), [service]);
+  const primaryCtaLabel = useMemo(() => getPrimaryCtaLabel(service), [service]);
+
   const goToDetail = () => {
-    navigate(`/servicios/${service.slug}`);
+    navigate(serviceRoute);
   };
 
-  const goToContact = (event) => {
+  const goToPrimaryAction = (event) => {
     event.stopPropagation();
-    navigate(`/servicios/${service.slug}#contacto-servicio`);
+
+    if (isHogarService(service)) {
+      navigate('/servicios/hogar');
+      return;
+    }
+
+    navigate(`${serviceRoute}#contacto-servicio`);
   };
 
   const handleExpand = (event) => {
@@ -522,7 +665,7 @@ function ServiceCard({ service, index, onExpand }) {
             </div>
 
             <span className="hidden shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.15em] text-white sm:inline-flex">
-              Click para ver
+              {isHogarService(service) ? 'Cotizador' : 'Click para ver'}
             </span>
           </div>
 
@@ -563,17 +706,19 @@ function ServiceCard({ service, index, onExpand }) {
             <div className="mb-3 flex items-center gap-2 rounded-2xl border border-sky-100 bg-white/72 px-3 py-2.5">
               <HiClock className="shrink-0 text-[1rem] text-[var(--color-primary)]" />
               <p className="cuerpo text-[0.78rem] font-medium leading-5 text-slate-600">
-                Consultá por alcance, zona y disponibilidad desde el formulario.
+                {isHogarService(service)
+                  ? 'Cotizá en línea, agregá servicios y elegí disponibilidad.'
+                  : 'Consultá por alcance, zona y disponibilidad desde el formulario.'}
               </p>
             </div>
 
             <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
-                onClick={goToContact}
+                onClick={goToPrimaryAction}
                 className="cuerpo inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-4 py-3 text-[0.82rem] font-semibold text-white shadow-[0_16px_32px_rgba(25,211,223,0.20)] transition-all duration-300 hover:-translate-y-[2px] hover:bg-[var(--color-secondary)] hover:shadow-[0_22px_40px_rgba(25,211,223,0.26)]"
               >
-                {service.ctaLabel}
+                {primaryCtaLabel}
                 <HiArrowUpRight className="text-[0.95rem]" />
               </button>
 
@@ -585,7 +730,9 @@ function ServiceCard({ service, index, onExpand }) {
                 }}
                 className="cuerpo inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-3 text-[0.82rem] font-semibold text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-[2px] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
               >
-                {service.secondaryCtaLabel}
+                {isHogarService(service)
+                  ? 'Abrir cotizador'
+                  : service.secondaryCtaLabel}
                 <HiChevronRight className="text-[0.9rem]" />
               </button>
             </div>
@@ -742,7 +889,7 @@ function Servicios() {
           >
             <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" />
             <span className="cuerpo text-[0.78rem] font-semibold uppercase tracking-[0.24em] text-slate-500">
-              Nuestros servicios
+              Elegí cómo querés avanzar
             </span>
           </motion.div>
 
@@ -750,18 +897,17 @@ function Servicios() {
             variants={fadeUp}
             className="titulo mt-5 text-3xl uppercase leading-[1.03] tracking-tight text-slate-950 sm:text-4xl lg:text-5xl"
           >
-            Soluciones de{' '}
-            <span className="text-[var(--color-primary)]">limpieza</span>{' '}
-            pensadas para verse bien y funcionar mejor
+            Hogar, empresas y{' '}
+            <span className="text-[var(--color-primary)]">final de obra</span>
           </motion.h2>
 
           <motion.p
             variants={fadeUp}
             className="cuerpo mx-auto mt-5 max-w-2xl text-[0.98rem] leading-7 text-slate-600 sm:text-[1.03rem]"
           >
-            En VALMAT combinamos criterio técnico, planificación y ejecución
-            profesional para intervenir espacios con detalle, prolijidad y una
-            presentación final a la altura de cada necesidad.
+            VALMAT organiza cada servicio según el tipo de necesidad: cotización
+            interactiva para hogares, consultas comerciales para empresas y
+            visita técnica para finales de obra.
           </motion.p>
 
           <ClientTypeFilter
@@ -793,6 +939,7 @@ function Servicios() {
         ) : (
           <>
             {/* Benjamin Orellana - 2026/04/27 - Se elimina ServiceQuickSelector y mobile muestra todos los servicios disponibles sin selector intermedio. */}
+            {/* Benjamin Orellana - 28/04/2026 - Mobile muestra los bloques principales Hogar, Empresas y Final de obra. */}
             <div className="mt-7 grid gap-5 lg:hidden">
               <AnimatePresence mode="popLayout">
                 {services.map((service, index) => (
@@ -818,6 +965,7 @@ function Servicios() {
             </div>
 
             {/* Benjamin Orellana - 2026/04/24 - Desktop mantiene siempre las cards visibles para comparar servicios. */}
+            {/* Benjamin Orellana - 28/04/2026 - Desktop prioriza una fila de 3 bloques principales. */}
             <div className="mt-10 hidden gap-5 lg:grid lg:grid-cols-3">
               {services.map((service, index) => (
                 <ServiceCard

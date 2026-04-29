@@ -17,9 +17,8 @@ import {
   HiWrenchScrewdriver
 } from 'react-icons/hi2';
 import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import Contacto from '../sections/Contacto';
-
+import ServicioLeadForm from './Servicios/ServicioLeadForm';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 // Benjamin Orellana - 25/04/2026 - Resuelve URLs públicas de media local subida al backend.
@@ -740,8 +739,6 @@ function ServicioDetalleLoading({ logoSrc }) {
           </div>
         </div>
       </main>
-
-      <Footer logoSrc={logoSrc} />
     </>
   );
 }
@@ -776,8 +773,6 @@ function ServicioNotFound({
           </Link>
         </div>
       </main>
-
-      <Footer logoSrc={logoSrc} />
     </>
   );
 }
@@ -867,6 +862,23 @@ const ServicioDetalle = ({ logoSrc }) => {
     navigate('/');
   };
 
+  // Benjamin Orellana - 29/04/2026 - Detecta si el detalle debe mostrar formulario público de lead.
+  const serviceSlug = String(service?.slug || '')
+    .trim()
+    .toLowerCase();
+
+  const showLeadForm =
+    serviceSlug === 'empresas' ||
+    serviceSlug === 'empresa' ||
+    serviceSlug === 'final-de-obra' ||
+    serviceSlug === 'obra';
+
+  const leadFormVariant =
+    serviceSlug === 'final-de-obra' || serviceSlug === 'obra'
+      ? 'OBRA'
+      : 'EMPRESA';
+
+  
   return (
     <>
       <Navbar logoSrc={logoSrc} />
@@ -1001,13 +1013,16 @@ const ServicioDetalle = ({ logoSrc }) => {
           id="contacto-servicio"
           className="relative scroll-mt-24 bg-[linear-gradient(180deg,#f3fbfe_0%,#ffffff_100%)]"
         >
-          <Contacto />
+          {/* Benjamin Orellana - 29/04/2026 - Formulario público para solicitudes informativas de Empresas y Final de obra. */}
+          {showLeadForm && (
+            <div className="mx-auto mt-8 w-full max-w-7xl px-5 sm:px-6 lg:px-8">
+              <ServicioLeadForm variant={leadFormVariant} service={service} />
+            </div>
+          )}
         </section>
       </main>
-
-      <Footer logoSrc={logoSrc} />
     </>
   );
-};
+};;
 
 export default ServicioDetalle;

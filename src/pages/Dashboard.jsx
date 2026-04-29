@@ -347,6 +347,7 @@ export default function Dashboard() {
       label: 'SV',
       route: '/dashboard/servicios'
     },
+    // Benjamin Orellana - 29/04/2026 - Habilita acceso al módulo interno de agenda operativa de Servicios VALMAT.
     {
       title: 'Clientes',
       description:
@@ -355,9 +356,16 @@ export default function Dashboard() {
     },
     {
       title: 'Solicitudes web',
+      description: 'Registros de cotización de Hogar.',
+      label: 'SW',
+      route: '/dashboard/servicios/solicitudes'
+    },
+    {
+      title: 'Agenda operativa',
       description:
-        'Recepción, clasificación y seguimiento de consultas del sitio.',
-      label: 'SW'
+        'Calendario de equipos, visitas, servicios y tareas programadas.',
+      label: 'AG',
+      route: '/dashboard/servicios/agenda'
     },
     {
       title: 'Órdenes de servicio',

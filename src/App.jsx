@@ -19,8 +19,11 @@ import SucursalesAdmin from './pages/Gets/Core/SucursalesAdmin';
 import UsuariosAdmin from './pages/Gets/Core/UsuariosAdmin';
 import ServiciosAdmin from './pages/Dashboard/Servicios/ServiciosAdmin';
 import ServiciosTiposClientesAdmin from './pages/Dashboard/Servicios/ServiciosTiposClientesAdmin';
-
+import HogarCotizador from './pages/Servicios/HogarCotizador';
+import ServiciosSolicitudesAdmin from './pages/Dashboard/Servicios/ServiciosSolicitudesAdmin';
+import ServiciosAgendaAdmin from './pages/Dashboard/Servicios/ServiciosAgendaAdmin';
 import Footer from './components/Footer';
+
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
@@ -58,6 +61,10 @@ function App() {
       <Routes>
         {/* Benjamin Orellana - 25/04/2026 - Rutas públicas del sitio institucional VALMAT. */}
         <Route path="/" element={<Home logoSrc={logoValmat} />} />
+        <Route
+          path="/servicios/hogar"
+          element={<HogarCotizador logoSrc={logoValmat} />}
+        />
 
         <Route
           path="/servicios/:slug"
@@ -109,6 +116,15 @@ function App() {
               <ServiciosTiposClientesAdmin />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/dashboard/servicios/solicitudes"
+          element={<ServiciosSolicitudesAdmin />}
+        />
+        {/* Benjamin Orellana - 29/04/2026 - Ruta interna para gestionar agenda operativa de Servicios VALMAT. */}
+        <Route
+          path="/dashboard/servicios/agenda"
+          element={<ServiciosAgendaAdmin />}
         />
 
         <Route path="*" element={<NotFound logoSrc={logoValmat} />} />
