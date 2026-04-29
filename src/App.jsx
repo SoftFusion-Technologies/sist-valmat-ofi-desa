@@ -22,6 +22,10 @@ import ServiciosTiposClientesAdmin from './pages/Dashboard/Servicios/ServiciosTi
 import HogarCotizador from './pages/Servicios/HogarCotizador';
 import ServiciosSolicitudesAdmin from './pages/Dashboard/Servicios/ServiciosSolicitudesAdmin';
 import ServiciosAgendaAdmin from './pages/Dashboard/Servicios/ServiciosAgendaAdmin';
+
+// Benjamin Orellana - 29/04/2026 - Importa configuración interna del cotizador Hogar VALMAT.
+import ServiciosCotizadorAdmin from './pages/Dashboard/Servicios/ServiciosCotizadorAdmin';
+
 import Footer from './components/Footer';
 
 function ScrollToTop() {
@@ -126,7 +130,11 @@ function App() {
           path="/dashboard/servicios/agenda"
           element={<ServiciosAgendaAdmin />}
         />
-
+        {/* Benjamin Orellana - 29/04/2026 - Ruta interna para configurar servicios, variantes y adicionales del cotizador Hogar. */}
+        <Route
+          path="/dashboard/servicios/cotizador"
+          element={<ServiciosCotizadorAdmin />}
+        />
         <Route path="*" element={<NotFound logoSrc={logoValmat} />} />
       </Routes>
       <Footer logoSrc={logoValmat} />

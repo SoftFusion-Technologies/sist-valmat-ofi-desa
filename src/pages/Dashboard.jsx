@@ -343,29 +343,41 @@ export default function Dashboard() {
     {
       title: 'Servicios',
       description:
-        'Catálogo de limpieza técnica, oficinas, final de obra y mantenimiento.',
+        'Catálogo público, contenido comercial, media, FAQs y procesos.',
       label: 'SV',
       route: '/dashboard/servicios'
     },
-    // Benjamin Orellana - 29/04/2026 - Habilita acceso al módulo interno de agenda operativa de Servicios VALMAT.
+
+    // Benjamin Orellana - 29/04/2026 - Habilita acceso al módulo interno de configuración del cotizador Hogar VALMAT.
+    {
+      title: 'Cotizador Hogar',
+      description:
+        'Configuración de servicios cotizables, variantes y adicionales del cotizador público.',
+      label: 'CH',
+      route: '/dashboard/servicios/cotizador'
+    },
+
+    {
+      title: 'Solicitudes web',
+      description:
+        'Recepción y seguimiento de cotizaciones Hogar, Empresas y Final de obra.',
+      label: 'SW',
+      route: '/dashboard/servicios/solicitudes'
+    },
+
+    {
+      title: 'Agenda operativa',
+      description:
+        'Calendario de visitas, turnos, bloqueos y servicios programados.',
+      label: 'AG',
+      route: '/dashboard/servicios/agenda'
+    },
+
     {
       title: 'Clientes',
       description:
         'Base comercial y operativa de clientes particulares y empresas.',
       label: 'CL'
-    },
-    {
-      title: 'Solicitudes web',
-      description: 'Registros de cotización de Hogar.',
-      label: 'SW',
-      route: '/dashboard/servicios/solicitudes'
-    },
-    {
-      title: 'Agenda operativa',
-      description:
-        'Calendario de equipos, visitas, servicios y tareas programadas.',
-      label: 'AG',
-      route: '/dashboard/servicios/agenda'
     },
     {
       title: 'Órdenes de servicio',
@@ -377,15 +389,9 @@ export default function Dashboard() {
       title: 'Presupuestos',
       description: 'Emisión y seguimiento de propuestas comerciales.',
       label: 'PR'
-    },
-    {
-      title: 'Agenda operativa',
-      description:
-        'Calendario de equipos, visitas, servicios y tareas programadas.',
-      label: 'AG'
     }
   ];
-
+  
   // Benjamin Orellana - 25/04/2026 - Sidebar con íconos visuales para mejorar lectura y navegación.
   const sidebarItems = [
     {
